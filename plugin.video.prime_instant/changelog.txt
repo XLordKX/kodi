@@ -1,0 +1,8 @@
+1.0.0
+- Initial release
+1.0.1
+- Changed login (email and password are not stored anymore)
+1.0.2
+- Added debug output
+- Fixed folder encoding issue
+- Some small improvements

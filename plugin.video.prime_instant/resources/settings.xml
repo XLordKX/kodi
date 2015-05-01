@@ -1,0 +1,28 @@
+<settings>
+    <category label="30201">
+        <setting id="siteVersion" type="enum" label="30103" values="US|UK|DE" default="0"/>
+        <setting id="maxBitrate" type="enum" label="30104" values="360p@300kb|480p@600kb|480p@900kb|480p@1350kb|480p@2000kb|720p@2500kb|720p@4000kb|720p@6000kb|1080p@10000kb|Ask" default="6"/>
+        <setting id="watchlistOrder" type="enum" label="30107" lvalues="30118|30119" default="0"/>
+        <setting type="sep" />
+        <setting id="showLibrary" type="bool" label="30105" default="false"/>
+        <setting id="showKids" type="bool" label="30106" default="true"/>
+        <setting id="showOriginals" type="bool" label="30121" default="true"/>
+    </category>
+    <category label="30202">
+        <setting id="forceView" type="bool" label="30108" default="true"/>
+        <setting id="viewIdMovies" type="number" label="30109" enable="eq(-1,true)" default="501"/>
+        <setting id="viewIdShows" type="number" label="30110" enable="eq(-2,true)" default="501"/>
+        <setting id="viewIdSeasons" type="number" label="30111" enable="eq(-3,true)" default="50"/>
+        <setting id="viewIdEpisodes" type="number" label="30112" enable="eq(-4,true)" default="503"/>
+        <setting id="viewIdDetails" type="number" label="30123" enable="eq(-5,true)" default="508"/>
+    </category>
+    <category label="30203">
+        <setting id="useTMDb" type="bool" label="30113" default="true"/>
+        <setting id="preferAmazonTrailer" type="bool" label="30120" default="false"/>
+        <setting id="updateDB" type="bool" label="30114" default="true"/>
+        <setting id="showNotification" type="bool" label="30122" default="true"/>
+        <setting type="sep" />
+        <setting label="30115" type="action" action="RunPlugin(plugin://plugin.video.prime_instant/?mode=deleteCache)"/>
+        <setting label="30116" type="action" action="RunPlugin(plugin://plugin.video.prime_instant/?mode=deleteCookies)"/>
+    </category>
+</settings>
