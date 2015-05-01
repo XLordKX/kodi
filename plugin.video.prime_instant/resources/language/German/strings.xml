@@ -43,6 +43,14 @@
   <string id="30089">Aus deiner Watchlist entfernt...</string>
   <string id="30090">Amazon Prime Instant Video - Email eingeben:</string>
   <string id="30091">Amazon Prime Instant Video - Password eingeben:</string>
+  <string id="30092">Ungültige URL</string>
+  <string id="30093">Das Video kann nicht wiedergegeben werden.</string>
+  <string id="30094">Kein Stream</string>
+  <string id="30095">Es wurde kein passender Stream zum Öffnen gefunden</string>
+  <string id="30096">Bitte einen Moment warten</string>
+  <string id="30097">Es wurden zu viele Verbindungen aufgebaut. Bitte warte einen Moment.</string>
+  <string id="30098">Video nicht in deutsch verfügbar</string>
+  <string id="30099">Das Video ist nicht in deutscher Sprache verfügbar. Stattdessen in originaler Sprache wiedergeben?</string>
   <string id="30101">Email</string>
   <string id="30102">Passwort</string>
   <string id="30103">Seitenversion</string>

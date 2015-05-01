@@ -61,6 +61,8 @@ watchlistOrder = addon.getSetting("watchlistOrder")
 watchlistOrder = ["DATE_ADDED_DESC", "TITLE_ASC"][int(watchlistOrder)]
 maxBitrate = addon.getSetting("maxBitrate")
 maxBitrate = [300, 600, 900, 1350, 2000, 2500, 4000, 6000, 10000, -1][int(maxBitrate)]
+maxDevices = 3
+maxDevicesWaitTime = 120
 siteVersion = addon.getSetting("siteVersion")
 apiMain = ["atv-ps", "atv-ps-eu", "atv-ps-eu"][int(siteVersion)]
 rtmpMain = ["azusfms", "azeufms", "azeufms"][int(siteVersion)]
@@ -75,9 +77,11 @@ urlMainS = "https://www.amazon."+siteVersion
 addon.setSetting('email', '')
 addon.setSetting('password', '')
 
+
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-userAgent = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"
+userAgent = "Mozilla/5.0 (X11; U; Linux i686; de-DE) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
 opener.addheaders = [('User-agent', userAgent)]
+deviceTypeID = "A324MFXUEZFF7B"
 
 if not os.path.isdir(addonUserDataFolder):
     os.mkdir(addonUserDataFolder)
@@ -95,6 +99,7 @@ if not os.path.isdir(libraryFolderTV):
     os.mkdir(libraryFolderTV)
 if os.path.exists(cookieFile):
     cj.load(cookieFile)
+
 
 
 def index():
@@ -255,7 +260,7 @@ def listOriginals():
 def listWatchList(url):
     content = opener.open(url).read()
     debug(content)
-    match = re.compile("token : '(.+?)'", re.DOTALL).findall(content)
+    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
     spl = content.split('<div class="innerItem"')
@@ -597,8 +602,17 @@ def listGenres(url, videoType):
             addDir(cleanTitle(title), urlMain+url.replace("/s/","/mn/search/ajax/").replace("&amp;","&"), 'listShows', "")
     xbmcplugin.endOfDirectory(pluginhandle)
 
+def printLogInline(ptext):
+    if (True):
+        print(ptext)
 
 def playVideo(videoID, selectQuality=False, playTrailer=False):
+    maxDevicesTimestamp = addon.getSetting("maxDevicesTimestamp")
+    try:
+        maxDevicesTimestamp = json.loads(maxDevicesTimestamp)
+    except:
+        maxDevicesTimestamp = []
+        maxDevicesTimestamp.append(0)
     streamTitles = []
     streamURLs = []
     cMenu = False
@@ -612,20 +626,38 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         hasTrailer = True
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
-        matchTitle=re.compile('"product":.+?"title":"(.+?)"', re.DOTALL).findall(content)
-        matchThumb=re.compile('"product":.+?"image":"(.+?)"', re.DOTALL).findall(content)
+        matchSWFUrl=re.compile('<script type="text/javascript" src="(.+?)"', re.DOTALL).findall(content)
+        flashContent=opener.open(matchSWFUrl[0]).read()
+        matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
+        matchTitle=re.compile('"og:title" content="(.+?)"', re.DOTALL).findall(content)
+        matchThumb=re.compile('"og:image" content="(.+?)"', re.DOTALL).findall(content)
         matchToken=re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
-        matchSWF=re.compile('"playerSwf":"(.+?)"').findall(content)
         matchMID=re.compile('"marketplaceID":"(.+?)"').findall(content)
-        matchDID=re.compile('"deviceTypeId":"(.+?)"').findall(content)
         if not playTrailer or (playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com"):
             content=opener.open(urlMainS+'/gp/video/streaming/player-token.json?callback=jQuery1640'+''.join(random.choice(string.digits) for x in range(18))+'_'+str(int(time.time()*1000))+'&csrftoken='+urllib.quote_plus(matchToken[0])+'&_='+str(int(time.time()*1000))).read()
             matchToken=re.compile('"token":"(.+?)"', re.DOTALL).findall(content)
         content = ""
+        tooManyConnections = True
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(deviceTypeID)+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif not playTrailer:
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            if len(maxDevicesTimestamp) < maxDevices:
+                maxDevicesTimestamp += [0]
+            elif len(maxDevicesTimestamp) > maxDevices:
+                maxDevicesTimestamp.pop()
+            for i, val in enumerate(maxDevicesTimestamp):
+                if ((int(val) + maxDevicesWaitTime) <= int(time.time())):
+                    content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(deviceTypeID)+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+                    if not "SUCCESS" in str(content):
+                        maxDevicesTimestamp[i] = int(val) + 10
+                    elif '$de' in str(content):
+                        ediag = xbmcgui.Dialog()
+                        if (ediag.yesno(translation(30098), translation(30099))):
+                            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&xws-fa-ov=true&audioTrackId=eng_dialog_0&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(deviceTypeID)+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+                    else:
+                        tooManyConnections = False
+                    break
+            addon.setSetting("maxDevicesTimestamp", str(json.dumps(maxDevicesTimestamp)))
         elif playTrailer:
             try:
                 strT = ""
@@ -638,29 +670,34 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 pass
         debug(content)
         if content:
-            content = json.loads(content)
-            thumbUrl = matchThumb[0].replace(".jpg", "")
-            thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
-            if "CDP.Authorization.InvalidGeoIP" in str(content):
-                xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30083)+',10000,'+icon+')')
-            elif "CDP.Playback.NotOwned" in str(content):
-                xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30084)+',10000,'+icon+')')
-            elif "CDP.Playback.TemporarilyUnavailable" in str(content):
-                xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30087)+',5000,'+icon+')')
+            if not "SUCCESS" in str(content):
+                content = json.loads(content)
+                ediag = xbmcgui.Dialog()
+                acode = str(content['message']['body']['code'])
+                amessage = str(content['message']['body']['message'])
+                ediag.ok('Amazon meldet: '+ acode, amessage)
             else:
+                content = json.loads(content)
+                thumbUrl = matchThumb[0].replace(".jpg", "")
+                thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
                 contentT = ""
                 try:
                     contentT = content['message']['body']['urlSets']['streamingURLInfoSet'][0]['streamingURLInfo']
                 except:
-                    contentT = content['message']['body']['streamingURLInfoSet']['streamingURLInfo']
+                    try:
+                        contentT = content['message']['body']['streamingURLInfoSet']['streamingURLInfo']
+                    except:
+                        pass
                 if contentT:
+                    url = ''
                     for item in contentT:
-                        if selectQuality:
-                            streamTitles.append(str(item['bitrate'])+"kb")
-                            streamURLs.append(item['url'])
-                            url = item['url']
-                        elif item['bitrate']<=maxBitrate:
-                            url = item['url']
+                        if not '$' in item['url']:
+                            if selectQuality:
+                                streamTitles.append(str(item['bitrate'])+"kb")
+                                streamURLs.append(item['url'])
+                                url = item['url']
+                            elif item['bitrate']<=maxBitrate:
+                                url = item['url']
                     if not rtmpMain in url:
                         try:
                             if selectQuality:
@@ -674,25 +711,37 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                                     url = item['url']
                         except:
                             pass
-                if selectQuality:
-                    dialog = xbmcgui.Dialog()
-                    nr=dialog.select(translation(30059), streamTitles)
-                    if nr>=0:
-                      url=streamURLs[nr]
-                if url.startswith("rtmpe"):
-                    url = url.replace('rtmpe','rtmp')+' swfVfy=1 swfUrl='+matchSWF[0]+' pageUrl='+urlMain+'/dp/'+videoID+' app='+rtmpMain+'-vod playpath='+url[url.find('mp4:'):]+' tcUrl=rtmpe://'+rtmpMain+'-vodfs.fplive.net:1935/'+rtmpMain+'-vod/'
-                    if playTrailer or (selectQuality and cMenu):
-                        listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
-                        xbmc.Player().play(url, listitem)
+                    if url and not '$' in url:
+                        if selectQuality:
+                            dialog = xbmcgui.Dialog()
+                            nr=dialog.select(translation(30059), streamTitles)
+                            if nr>=0:
+                              url=streamURLs[nr]
+                        if url.startswith("rtmpe"):
+                            url = url.replace('rtmpe','rtmp')+' swfVfy=1 swfUrl='+matchSWF[0]+' pageUrl='+urlMain+'/dp/'+videoID+' app='+rtmpMain+'-vod playpath='+url[url.find('mp4:'):]+' tcUrl=rtmpe://'+rtmpMain+'-vodfs.fplive.net:1935/'+rtmpMain+'-vod/'
+                            if playTrailer or (selectQuality and cMenu):
+                                listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
+                                xbmc.Player().play(url, listitem)
+                            else:
+                                listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
+                                xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
+                        elif url.startswith("http"):
+                            dialog = xbmcgui.Dialog()
+                            if dialog.yesno('Info', translation(30085)):
+                                content=opener.open(urlMainS+"/gp/video/settings/ajax/player-preferences-endpoint.html", "rurl="+urllib.quote_plus(urlMainS+"/gp/video/settings")+"&csrfToken="+urllib.quote_plus(addon.getSetting('csrfToken'))+"&aiv-pp-toggle=flash").read()
+                                xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30086)+',10000,'+icon+')')
+                                playVideo(videoID, selectQuality)
                     else:
-                        listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
-                        xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
-                elif url.startswith("http"):
-                    dialog = xbmcgui.Dialog()
-                    if dialog.yesno('Info', translation(30085)):
-                        content=opener.open(urlMainS+"/gp/video/settings/ajax/player-preferences-endpoint.html", "rurl="+urllib.quote_plus(urlMainS+"/gp/video/settings")+"&csrfToken="+urllib.quote_plus(addon.getSetting('csrfToken'))+"&aiv-pp-toggle=flash").read()
-                        xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30086)+',10000,'+icon+')')
-                        playVideo(videoID, selectQuality)
+                        url = ''
+                        diag = xbmcgui.Dialog()
+                        diag.ok(translation(30092), translation(30093))
+                else:
+                    diag = xbmcgui.Dialog()
+                    diag.ok(translation(30094), translation(30095))
+        else:
+            if tooManyConnections:
+                diag = xbmcgui.Dialog()
+                diag.ok(translation(30096), translation(30097))
     else:
         xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30082)+',10000,'+icon+')')
    
@@ -700,31 +749,27 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
 def showInfo(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
     content=opener.open(urlMain+"/dp/"+videoID).read()
-    match=re.compile('"product":.+?"title":"(.+?)"', re.DOTALL).findall(content)
-    title = match[0]
+    match=re.compile('<script type = "application/ld+json"> (.+?) </script>', re.DOTALL).findall(content)
+    jsonstr=cleanInput(match[0])
+    parsed=json.loads(jsonstr)
+    title = parsed["name"]
     match=re.compile('class="release-year".*?>(.+?)<', re.DOTALL).findall(content)
     year = match[0]
     title = title+" ("+year+")"
     title = cleanTitle(title)
-    match=re.compile('"product":.+?"image":"(.+?)"', re.DOTALL).findall(content)
-    thumb = match[0].replace(".jpg", "")
+
+    thumb = parsed["thumbnailUrl"].replace(".jpg", "")
     thumb = thumb[:thumb.rfind(".")]+".jpg"
-    match=re.compile('"director":.+?"name":"(.+?)"', re.DOTALL).findall(content)
-    director = match[0].replace(",",", ")
-    match=re.compile('"actor":.+?"name":"(.+?)"', re.DOTALL).findall(content)
-    actors = match[0].replace(",",", ")
+    
+    director = parsed["director"][0]["name"].replace(",",", ")
+
+    actors = parsed["actor"][0]["name"].replace(",",", ")
     match=re.compile('property="og:duration" content="(.+?)"', re.DOTALL).findall(content)
     length = str(int(match[0])/60)+" min."
-    match=re.compile('"ratingValue":"(.+?)"', re.DOTALL).findall(content)
-    rating = match[0]
-    match=re.compile('"reviewCount":"(.+?)"', re.DOTALL).findall(content)
-    ratingCount = match[0]
-    match=re.compile('"description":"(.+?)"', re.DOTALL).findall(content)
-    description = cleanTitle(match[0])
-    match=re.compile('"genre":"(.+?)"', re.DOTALL).findall(content)
-    genre = ""
-    if match:
-        genre = cleanTitle(match[0])
+    rating = parsed["aggregateRating"]["ratingValue"]
+    ratingCount = parsed["aggregateRating"]["reviewCount"]
+    description = parsed["description"]
+    genre = parsed["genre"]
     addLink(title, videoID, "playVideo", thumb, videoType="movie", desc=description, duration=length, year=year, mpaa="", director=director, genre=genre, rating=rating)
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
@@ -828,9 +873,9 @@ def login():
 def cleanTitle(title):
     if "[HD]" in title:
         title = title[:title.find("[HD]")]
-    title = title.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","Ã©").replace("&auml;","Ã¤").replace("&ouml;","Ã¶").replace("&uuml;","Ã¼").replace("&Auml;","Ã„").replace("&Ouml;","Ã–").replace("&Uuml;","Ãœ").replace("&szlig;","ÃŸ").replace("&hellip;","â€¦")
-    title = title.replace("&#233;","Ã©").replace("&#228;","Ã¤").replace("&#246;","Ã¶").replace("&#252;","Ã¼").replace("&#196;","Ã„").replace("&#214;","Ã–").replace("&#220;","Ãœ").replace("&#223;","ÃŸ")
-    return title.replace("\xe4","Ã¤").replace("\xf6","Ã¶").replace("\xfc","Ã¼").replace("\xc4","Ã„").replace("\xd6","Ã–").replace("\xdc","Ãœ").replace("\xdf","ÃŸ").strip()
+    title = title.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","…")
+    title = title.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß")
+    return title.replace("\xe4","ä").replace("\xf6","ö").replace("\xfc","ü").replace("\xc4","Ä").replace("\xd6","Ö").replace("\xdc","Ü").replace("\xdf","ß").strip()
 
 
 def cleanSeasonTitle(title):
@@ -885,6 +930,8 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
             title = title[title.find('.')+1:].strip()
             match = re.compile('/(.+?)/', re.DOTALL).findall(entry)
             episodeID = match[0]
+            if len(episodeNr) > 2:
+                episodeNr = ''.join(re.findall(r'\d+', episodeNr))
             if len(episodeNr) == 1:
                 episodeNr = "0"+episodeNr
             seasonNr = matchSeason[0]
