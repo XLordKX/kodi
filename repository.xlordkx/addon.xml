@@ -3,7 +3,7 @@
 	<extension point="xbmc.addon.repository" name="XLordKX Repo">
 		<info compressed="false">https://raw.githubusercontent.com/XLordKX/kodi/master/addons.xml</info>
 		<checksum>https://raw.githubusercontent.com/XLordKX/kodi/master/addons.xml.md5</checksum>
-		<datadir zip="false">https://raw.githubusercontent.com/XLordKX/kodi/master/</datadir>
+		<datadir zip="true">https://raw.githubusercontent.com/XLordKX/kodi/master/zip/</datadir>
 	</extension>
 	<extension point="xbmc.addon.metadata">
 		<summary>Some fixed scripts and addons</summary>
