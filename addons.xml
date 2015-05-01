@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addons>
+<addon id="plugin.video.prime_instant" name="Amazon Prime Instant Video" version="1.0.3" provider-name="XLordKX">
+    <requires>
+        <import addon="xbmc.python" version="2.1.0"/>
+        <import addon="script.module.mechanize" version="0.2.6"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>video</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <platform>all</platform>
+        <summary lang="en">Amazon Prime Instant Video Add-on (US/UK/DE)</summary>
+        <language></language>
+        <description lang="en">Amazon Prime Instant Video Add-on (US/UK/DE)</description>
+        <disclaimer lang="en">Some parts of this addon may not be legal in your country of residence - please check with your local laws before installing.</disclaimer>
+        <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
+        <source>https://github.com/AddonScriptorDE/plugin.video.prime_instant</source>
+        <forum>http://forum.xbmc.org/showthread.php?tid=</forum>
+        <email>AddonScriptorDE at yahoo dot de</email>
+        <website>http://www.amazon.com</website>
+    </extension>
+</addon>
+
+<addon id="repository.xlordkx" name="XLordKX Repo" version="1.0.0" provider-name="XLordKX">
+	<extension point="xbmc.addon.repository" name="XLordKX">
+		<info compressed="false">http://addonscriptorde-beta-repo.googlecode.com/svn/trunk/addons.xml</info>
+		<checksum>http://addonscriptorde-beta-repo.googlecode.com/svn/trunk/addons.xml.md5</checksum>
+		<datadir zip="false">http://addonscriptorde-beta-repo.googlecode.com/svn/trunk/</datadir>
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<summary>Some fixed scripts and addons</summary>
+		<description>Some fixed scripts and addons</description>
+		<disclaimer></disclaimer>
+		<platform>all</platform>
+	</extension>
+</addon>
+</addons>
