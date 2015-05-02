@@ -21,10 +21,12 @@
 # *  https://anarchintosh-projects.googlecode.com/files/addons_xml_generator.py
  
 """ addons.xml generator """
- 
+
+from shutil import make_archive,copyfile
 import os
 import sys
- 
+import re
+
 # Compatibility with 3.0, 3.1 and 3.2 not supporting u"" literals
 if sys.version < '3':
     import codecs
@@ -56,7 +58,7 @@ class Generator:
         for addon in addons:
             try:
                 # skip any file or .svn folder or .git folder
-                if ( not os.path.isdir( addon ) or addon == ".svn" or addon == ".git" ): continue
+                if ( not os.path.isdir( addon ) or addon == ".svn" or addon == ".git" or addon == "nbproject" or addon == "zip"): continue
                 # create path
                 _path = os.path.join( addon, "addon.xml" )
                 # split lines for stripping
@@ -74,6 +76,29 @@ class Generator:
                         addon_xml += line.rstrip() + "\n"
                 # we succeeded so add to our final addons.xml text
                 addons_xml += addon_xml.rstrip() + "\n\n"
+                # get plugin version
+                fcontent = open( _path, "r" ).read()
+                zversion = re.compile('<addon id=".+?" name=".+?" version="(.+?)"', re.DOTALL).findall(fcontent)
+                addonname = re.compile('<addon id="(.+?)" name="', re.DOTALL).findall(fcontent)
+                # zip dir
+                zdir = os.path.join(".", "zip")
+                # zipped addon dir
+                zaddondir = os.path.join(".", "zip", addonname[0])
+                # #
+                if not os.path.exists(zaddondir):
+                    os.mkdir(zaddondir)
+                if os.path.isfile(os.path.join(zaddondir, "changelog.txt")):
+                    os.remove(os.path.join(zaddondir, "changelog.txt"))
+                if os.path.isfile(os.path.join(zaddondir, "changelog-"+ zversion[0] +".txt")):
+                    os.remove(os.path.join(zaddondir, "changelog-"+ zversion[0] +".txt"))
+                if os.path.isfile(os.path.join(zaddondir, addonname[0] + "-" + zversion[0] +".zip")):
+                    os.remove(os.path.join(zaddondir, addonname[0] +"-"+ zversion[0] +".zip"))
+                copyfile(os.path.join(addon, "changelog.txt"),os.path.join(zaddondir, "changelog.txt"))
+                copyfile(os.path.join(addon, "changelog.txt"),os.path.join(zaddondir, "changelog-"+ zversion[0] +".txt"))
+                # create zipfile
+                archive_name = os.path.join(zaddondir, addonname[0] +"-"+ zversion[0])
+                make_archive(archive_name, 'zip', ".", addonname[0])
+                #make_zipfile(os.path.join(zaddondir, addon + "-" + zversion[0]),addon)
             except Exception as e:
                 # missing or poorly formatted addon.xml
                 print("Excluding %s for %s" % ( _path, e ))
@@ -105,7 +130,18 @@ class Generator:
         except Exception as e:
             # oops
             print("An error occurred saving %s file!\n%s" % ( file, e ))
- 
+
+    def make_zipfile(output_filename, source_dir):
+        relroot = os.path.abspath(os.path.join(source_dir, os.pardir))
+        with zipfile.ZipFile(output_filename, "w", zipfile.ZIP_DEFLATED) as zip:
+            for root, dirs, files in os.walk(source_dir):
+                # add directory (needed for empty dirs)
+                zip.write(root, os.path.relpath(root, relroot))
+                for file in files:
+                    filename = os.path.join(root, file)
+                    if os.path.isfile(filename): # regular files only
+                        arcname = os.path.join(os.path.relpath(root, relroot), file)
+                        zip.write(filename, arcname)
  
 if ( __name__ == "__main__" ):
     # start
