@@ -80,7 +80,7 @@ addon.setSetting('password', '')
 
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 #userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
-userAgent = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"
+#userAgent = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"
 opener.addheaders = [('User-agent', userAgent)]
 deviceTypeID = "A324MFXUEZFF7B"
 
@@ -356,7 +356,7 @@ def listMovies(url):
             else:
                 addLink(title, videoID, "playVideo", thumbUrl, "movie", "", "", year)
     if useTMDb:
-        dlParams = json.dumps(dlParams)
+        dlParams = json.dumps(unicode(dlParams))
         xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(str(dlParams))+')')
     match = re.compile('class="pagnNext".*?href="(.+?)"', re.DOTALL).findall(content)
     if match:
