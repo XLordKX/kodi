@@ -1,3 +1,6 @@
+1.0.3-r1
+- Added menu entry "Only for limited time available at Prime Instant Video" 
+  (only available for users of Amazon Germany)
 1.0.3
 - Forked from AddonScriptorDE Repository
 - Bug fixes

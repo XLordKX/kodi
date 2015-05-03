@@ -127,6 +127,7 @@ def browseMovies():
             addDir(translation(30007), urlMain+"/gp/search/ajax/?rh=n%3A3010075031%2Cn%3A!3010076031%2Cn%3A3015915031%2Cp_n_theme_browse-bin%3A3015972031%2Cp_85%3A3282148031&ie=UTF8", 'listMovies', "")
         addDir(translation(30008), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3279204031%2Cn%3A!3010076031%2Cn%3A3356018031&sort=date-desc-rank", 'listMovies', "")
         addDir(translation(30009), urlMain+"/s/?n=4963842031", 'listMovies', "")
+        addDir(translation(30999), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3010075031%2Cn%3A3356018031%2Cn%3A4225009031&sort=popularity-rank", 'listMovies', "")
     elif siteVersion=="com":
         addDir(translation(30006), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A2858778011%2Cn%3A7613704011&sort=popularity-rank", 'listMovies', "")
         addDir(translation(30011), urlMain+"/gp/search/other/?rh=n%3A2676882011%2Cn%3A7613704011&pickerToList=theme_browse-bin&ie=UTF8", 'listGenres', "", "movie")
@@ -158,6 +159,7 @@ def browseTV():
             addDir(translation(30007), urlMain+"/gp/search/ajax/?rh=n%3A3010075031%2Cn%3A!3010076031%2Cn%3A3015916031%2Cp_n_theme_browse-bin%3A3015972031%2Cp_85%3A3282148031&ie=UTF8", 'listShows', "")
         addDir(translation(30010), urlMain+"/gp/search/ajax/?_encoding=UTF8&keywords=[OV]&rh=n%3A3010075031%2Cn%3A3015916031%2Ck%3A[OV]%2Cp_85%3A3282148031&sort=date-desc-rank", 'listShows', "")
         addDir(translation(30008), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3279204031%2Cn%3A3010075031%2Cn%3A3015916031&sort=date-desc-rank", 'listShows', "")
+        addDir(translation(30999), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3010075031%2Cn%3A3356019031%2Cn%3A4225009031&sort=popularity-rank", 'listShows', "")
     elif siteVersion=="com":
         addDir(translation(30006), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A2858778011%2Cn%3A7613705011&sort=popularity-rank", 'listShows', "")
         addDir(translation(30011), urlMain+"/gp/search/other/?rh=n%3A2676882011%2Cn%3A7613705011&pickerToList=theme_browse-bin&ie=UTF8", 'listGenres', "", "tv")
@@ -874,9 +876,12 @@ def login():
 def cleanTitle(title):
     if "[HD]" in title:
         title = title[:title.find("[HD]")]
-    title = title.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","…")
-    title = title.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß")
-    return title.replace("\xe4","ä").replace("\xf6","ö").replace("\xfc","ü").replace("\xc4","Ä").replace("\xd6","Ö").replace("\xdc","Ü").replace("\xdf","ß").strip()
+    title = title.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","?")
+    title = title.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß").replace("&euml;","ë").replace("&Euml;","Ë")
+    title = title.replace('&quot;','"').replace('&gt;','>').replace('&lt;','<').replace("&euro;","¤").replace("&ntilde;","ñ").replace("&pound;","£").replace("&sect;","§").replace("&oslash;","ø").replace("&euml;","ë")
+    title = title.replace("&acirc;","â").replace("&aacute;","á").replace("&agrave;","à").replace("&ecirc;","ê").replace("&eacute;","é").replace("&egrave;","è").replace("&icirc;","î").replace("&iacute;","í").replace("&igrave;","ì")
+    title = title.replace("&ocirc;","ô").replace("&oacute;","ó").replace("&ograve;","ò").replace("&ucirc;","û").replace("&uacute;","ú").replace("&ugrave;","ù").replace("&ccedil;","ç")
+    return title.replace("\xe4","ä").replace("\xe9","é").replace("\xf6","ö").replace("\xfc","ü").replace("\xc4","Ä").replace("\xd6","Ö").replace("\xdc","Ü").replace("\xdf","ß").strip()
 
 
 def cleanSeasonTitle(title):
