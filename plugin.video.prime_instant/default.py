@@ -53,6 +53,7 @@ preferAmazonTrailer = addon.getSetting("preferAmazonTrailer") == "true"
 showNotification = addon.getSetting("showNotification") == "true"
 showOriginals = addon.getSetting("showOriginals") == "true"
 showLibrary = addon.getSetting("showLibrary") == "true"
+showAvailability = addon.getSetting("showAvailability") == "true"
 showKids = addon.getSetting("showKids") == "true"
 forceView = addon.getSetting("forceView") == "true"
 updateDB = addon.getSetting("updateDB") == "true"
@@ -77,10 +78,8 @@ urlMainS = "https://www.amazon."+siteVersion
 addon.setSetting('email', '')
 addon.setSetting('password', '')
 
-
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
-#userAgent = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"
+userAgent = "Mozilla/5.0 (X11; U; Linux i686; de-DE) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
 opener.addheaders = [('User-agent', userAgent)]
 deviceTypeID = "A324MFXUEZFF7B"
 
@@ -216,7 +215,8 @@ def listOriginals():
     elif siteVersion=="co.uk":
         content = opener.open(urlMain+"/b/?ie=UTF8&node=5687760031").read()
     debug(content)
-    match = re.compile("token : '(.+?)'", re.DOTALL).findall(content)
+    #match = re.compile("token : '(.+?)'", re.DOTALL).findall(content)
+    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
     content = content[content.find('<map name="pilots'):]
@@ -259,21 +259,77 @@ def listOriginals():
     if forceView:
         xbmc.executebuiltin('Container.SetViewMode(500)')
 
+def parseWatchListNew(content):
+    entries=re.compile('\<div\s+class\s*=\s*"grid-list-item\s+downloadable.+?$', re.DOTALL).findall(content)
+    if entries:
+        entry=entries[0]
+        elements=[]
 
-def listWatchList(url):
-    content = opener.open(url).read()
-    debug(content)
-    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
-    if match:
-        addon.setSetting('csrfToken', match[0])
-    spl = content.split('<div class="innerItem"')
+        # for all entries, do the same
+        while True:
+            # serach for beginning!
+            match=re.compile('^\s*\<div\s+class\s*=\s*"grid-list-item\s+downloadable.*?\>', re.DOTALL).findall(entry)
+            if match:
+                index=entry.find(match[0])+len(match[0])
+                entry=entry[index:]
+                depth=1
+                element=match[0]
+
+                while depth > 0:
+                    match=re.compile('^.*?\<div.*?\>', re.DOTALL).findall(entry)
+                    matchend=re.compile('^.*?\<\/div\>', re.DOTALL).findall(match[0])
+                    if matchend:
+                        entry=entry[len(matchend[0]):]
+                        depth=depth-1
+                        element+=matchend[0]
+                    else:
+                        entry=entry[len(match[0]):]
+                        depth=depth+1
+                        element+=match[0]
+                elements.append(element)
+            else:
+                break
+
     dlParams = []
-    videoType = ""
-    showEntries = []
+    for entry in elements:
+        if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
+            match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
+            if match:
+                if match[0] == "downloadable_tv_season":
+                    videoType = "tv"
+                else:
+                    videoType = "movie"
+                match = re.compile('id="(.+?)"', re.DOTALL).findall(entry)
+                videoID = match[0]
+                match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
+                title = match[0]
+                avail=''
+                if showAvailability:
+                    match = re.compile('\<span\s+class\s*=\s*"packshot-message"\s*\>(.+?)\<\/span\>', re.DOTALL).findall(entry)
+                    if match:
+                        avail=" - " + cleanInput(match[0])
+                title = cleanTitle(title)+avail
+                if videoType=="tv":
+                    title = cleanSeasonTitle(title)+avail
+                    if title in showEntries:
+                        continue
+                    showEntries.append(title)
+                match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
+                thumbUrl = ""
+                if match:
+                    thumbUrl = match[0].replace(".jpg", "")
+                    thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
+                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'thumb':thumbUrl, 'year':''})
+
+    return dlParams
+
+def parseWatchListOld(content):
+    dlParams = []
+    spl = content.split('<div class="innerItem"')
     for i in range(1, len(spl), 1):
         entry = spl[i]
         entry = entry[:entry.find('</td>')]
-        if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry)):
+        if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
             match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
             if match:
                 videoType = match[0]
@@ -282,7 +338,6 @@ def listWatchList(url):
                 match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
                 title = match[0]
                 title = cleanTitle(title)
-                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'year':''})
                 if videoType=="tv":
                     title = cleanSeasonTitle(title)
                     if title in showEntries:
@@ -293,19 +348,40 @@ def listWatchList(url):
                 if match:
                     thumbUrl = match[0].replace(".jpg", "")
                     thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
-                if videoType == "movie":
-                    addLinkR(title, videoID, "playVideo", thumbUrl, videoType)
-                else:
-                    addShowDirR(title, videoID, "listSeasons", thumbUrl, videoType)
+                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'thumb':thumbUrl, 'year':''})
+    return dlParams
+
+
+def listWatchList(url):
+    content = opener.open(url).read()
+    debug(content)
+    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
+    if match:
+        addon.setSetting('csrfToken', match[0])
+
+    dlParams = []
+    if "grid-list-item" in content:
+        dlParams = parseWatchListNew(content)
+    else:
+        dlParams = parseWatchListOld(content)
+
+    videoType = ""
+    for entry in dlParams:
+        videoType = entry['type']
+        if entry['type'] == "movie":
+            addLinkR(entry['title'], entry['id'], "playVideo", entry['thumb'], entry['type'])
+        else:
+            addShowDirR(entry['title'], entry['id'], "playVideo", entry['thumb'], entry['type'])
+
     if videoType == "movie":
         xbmcplugin.setContent(pluginhandle, "movies")
     else:
         xbmcplugin.setContent(pluginhandle, "tvshows")
     if useTMDb and videoType == "movie":
-        dlParams = json.dumps(dlParams)
+        dlParams = json.dumps(unicode(dlParams))
         xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(str(dlParams))+')')
     elif useTMDb:
-        dlParams = json.dumps(dlParams)
+        dlParams = json.dumps(unicode(dlParams))
         xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(str(dlParams))+')')
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
@@ -323,11 +399,16 @@ def listMovies(url):
     content = content.replace("\\","")
     if 'id="catCorResults"' in content:
         content = content[:content.find('id="catCorResults"')]
-    match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
+    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
     spl = content.split('id="result_')
     dlParams = []
+    match = re.compile('\<\/span\>(\<a class="a-link-normal a-text-normal" href=".+?"\>.+?\<\/a\>)', re.DOTALL).findall(content)
+    if match:
+        textMatch=re.compile('\>(.+?)\<', re.DOTALL).findall(match[0])
+        linkMatch=re.compile('href="(.+?)"\>', re.DOTALL).findall(match[0])
+        addDir(textMatch[0], urlMain+linkMatch[0].replace("&amp;","&"), "listMovies", "DefaultTVShows.png")
     for i in range(1, len(spl), 1):
         entry = spl[i]
         match = re.compile('asin="(.+?)"', re.DOTALL).findall(entry)
@@ -416,7 +497,7 @@ def listShows(url):
             else:
                 addShowDir(title, videoID, "listSeasons", thumbUrl, "tv")
     if useTMDb:
-        dlParams = json.dumps(dlParams)
+        dlParams = json.dumps(unicode(dlParams))
         xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(str(dlParams))+')')
     match = re.compile('class="pagnNext".*?href="(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -431,7 +512,7 @@ def listSimilarMovies(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
     content = opener.open(urlMain+"/gp/product/"+videoID).read()
     debug(content)
-    match = re.compile("token : '(.+?)'", re.DOTALL).findall(content)
+    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
     spl = content.split('<li class="packshot')
@@ -457,7 +538,7 @@ def listSimilarMovies(videoID):
                 if videoType == "movie":
                     addLinkR(title, videoID, "playVideo", thumbUrl, videoType)
     if useTMDb:
-        dlParams = json.dumps(dlParams)
+        dlParams = json.dumps(unicode(dlParams))
         xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(str(dlParams))+')')
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
@@ -501,7 +582,7 @@ def listSimilarShows(videoID):
                     showEntries.append(title)
                     addShowDirR(title, videoID, "listSeasons", thumbUrl, videoType)
     if useTMDb:
-        dlParams = json.dumps(dlParams)
+        dlParams = json.dumps(unicode(dlParams))
         xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(str(dlParams))+')')
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
@@ -543,19 +624,22 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
     if match:
         addon.setSetting('csrfToken', match[0])
     matchSeason = re.compile('"seasonNumber":"(.+?)"', re.DOTALL).findall(content)
+    seasonNr="0"
+    if matchSeason:
+        seasonNr=matchSeason[0]
     spl = content.split('href="'+urlMain+'/gp/product')
     for i in range(1, len(spl), 1):
         entry = spl[i]
         entry = entry[:entry.find('</li>')]
         match = re.compile('class="episode-title">(.+?)<', re.DOTALL).findall(entry)
-        if match and ('class="prime-logo-small"' in entry or 'class="episode-status cell-free"' in entry):
+        if match and ('class="prime-logo-small"' in entry or 'class="episode-status cell-free"' in entry or 'class="episode-status cell-owned"' in entry):
             title = match[0]
             title = cleanTitle(title)
             episodeNr = title[:title.find('.')]
             title = title[title.find('.')+1:].strip()
             match = re.compile('/(.+?)/', re.DOTALL).findall(entry)
             episodeID = match[0]
-            match = re.compile('<p>.+?</span>(.+?)</p>', re.DOTALL).findall(entry)
+            match = re.compile('<p>.+?</span>\s*(.+?)\s*</p>', re.DOTALL).findall(entry)
             desc = ""
             if match:
                 desc = cleanTitle(match[0])
@@ -585,7 +669,7 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
                 percentage = match[0]
                 if int(percentage)>95:
                     playcount = 1
-            addEpisodeLink(title, episodeID, 'playVideo', thumb, desc, length, matchSeason[0], episodeNr, seriesID, playcount, aired, seriesName)
+            addEpisodeLink(title, episodeID, 'playVideo', thumb, desc, length, seasonNr, episodeNr, seriesID, playcount, aired, seriesName)
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
     if forceView:
@@ -631,18 +715,19 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
     if matchCID:
         matchSWFUrl=re.compile('<script type="text/javascript" src="(.+?)"', re.DOTALL).findall(content)
         flashContent=opener.open(matchSWFUrl[0]).read()
-        matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
-        matchTitle=re.compile('"og:title" content="(.+?)"', re.DOTALL).findall(content)
-        matchThumb=re.compile('"og:image" content="(.+?)"', re.DOTALL).findall(content)
+        matchTitle=re.compile('"contentRating":".+?","name":"(.+?)"', re.DOTALL).findall(content)
+        matchThumb=re.compile('"video":.+?"thumbnailUrl":"(.+?)"', re.DOTALL).findall(content)
         matchToken=re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
+        matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
         matchMID=re.compile('"marketplaceID":"(.+?)"').findall(content)
+        matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
         if not playTrailer or (playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com"):
             content=opener.open(urlMainS+'/gp/video/streaming/player-token.json?callback=jQuery1640'+''.join(random.choice(string.digits) for x in range(18))+'_'+str(int(time.time()*1000))+'&csrftoken='+urllib.quote_plus(matchToken[0])+'&_='+str(int(time.time()*1000))).read()
             matchToken=re.compile('"token":"(.+?)"', re.DOTALL).findall(content)
         content = ""
         tooManyConnections = True
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(deviceTypeID)+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif not playTrailer:
             if len(maxDevicesTimestamp) < maxDevices:
                 maxDevicesTimestamp += [0]
@@ -650,13 +735,13 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 maxDevicesTimestamp.pop()
             for i, val in enumerate(maxDevicesTimestamp):
                 if ((int(val) + maxDevicesWaitTime) <= int(time.time())):
-                    content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(deviceTypeID)+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+                    content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
                     if not "SUCCESS" in str(content):
                         maxDevicesTimestamp[i] = int(val) + 10
                     elif '$de' in str(content):
                         ediag = xbmcgui.Dialog()
                         if (ediag.yesno(translation(30098), translation(30099))):
-                            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&xws-fa-ov=true&audioTrackId=eng_dialog_0&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(deviceTypeID)+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+                            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&audioTrackId=eng_dialog_0&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
                     else:
                         tooManyConnections = False
                     break
@@ -752,7 +837,8 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
 def showInfo(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
     content=opener.open(urlMain+"/dp/"+videoID).read()
-    match=re.compile('<script type = "application/ld+json"> (.+?) </script>', re.DOTALL).findall(content)
+
+    match=re.compile('\<script[\ \t]+type[\ \t]*=[\ \t]*"application\/ld\+json"\>[\ \t]*(.+?)[\ \t]*\<\/script\>', re.DOTALL).findall(content)
     jsonstr=cleanInput(match[0])
     parsed=json.loads(jsonstr)
     title = parsed["name"]
@@ -760,12 +846,9 @@ def showInfo(videoID):
     year = match[0]
     title = title+" ("+year+")"
     title = cleanTitle(title)
-
     thumb = parsed["thumbnailUrl"].replace(".jpg", "")
     thumb = thumb[:thumb.rfind(".")]+".jpg"
-    
     director = parsed["director"][0]["name"].replace(",",", ")
-
     actors = parsed["actor"][0]["name"].replace(",",", ")
     match=re.compile('property="og:duration" content="(.+?)"', re.DOTALL).findall(content)
     length = str(int(match[0])/60)+" min."
@@ -850,7 +933,7 @@ def login():
         keyboard.doModal()
         if keyboard.isConfirmed() and keyboard.getText():
             email = keyboard.getText()
-            keyboard = xbmc.Keyboard('', translation(30091))
+            keyboard = xbmc.Keyboard('', translation(30091), True)
             keyboard.doModal()
             if keyboard.isConfirmed() and keyboard.getText():
                 password = keyboard.getText()
@@ -873,15 +956,52 @@ def login():
             return "none"
 
 
+def cleanInput(str):
+
+    str = str.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","…")
+    str = str.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß")
+    printable=string.printable+"éäöüÄÖÜß…"
+    newStr=''
+    lastByte='\xff'
+    for c in str:
+        if c == '\xe4' or ( lastByte == '\x00' and c == '\xe4' ) or ( lastByte == '\xc3' and c == '\xa4'):
+            newStr+='ä'
+            lastByte=c
+        elif c == '\xf6' or ( lastByte == '\x00' and c == '\xf6' ) or ( lastByte == '\xc3' and c == '\xb6'):
+            newStr+='ö'
+            lastByte=c
+        elif c == '\xfc' or ( lastByte == '\x00' and c == '\xfc' ) or ( lastByte == '\xc3' and c == '\xbc') or ( lastByte == '\xc3' and ( c != '\xa4' and c != '\xb6' and c != '\x84' and c != '\x69' and c != '\x9c' and c != '\x9f' and c != '\xa9' ) ):
+            newStr+='ü'
+            lastByte=c
+        elif c == '\xc4' or ( lastByte == '\x00' and c == '\xc4' ) or ( lastByte == '\xc3' and c == '\x84'):
+            newStr+='Ä'
+            lastByte=c
+        elif c == '\xd6' or ( lastByte == '\x00' and c == '\xd6' ) or ( lastByte == '\xc3' and c == '\x69'):
+            newStr+='Ö'
+            lastByte=c
+        elif c == '\xdc' or ( lastByte == '\x00' and c == '\xdc' ) or ( lastByte == '\xc3' and c == '\x9c'):
+            newStr+='Ü'
+            lastByte=c
+        elif c == '\xdf' or ( lastByte == '\x00' and c == '\xdf' ) or ( lastByte == '\xc3' and c == '\x9f'):
+            newStr+='ß'
+            lastByte=c
+        elif c == '\xe9' or ( lastByte == '\x00' and c == '\xe9' ) or ( lastByte == '\xc3' and c == '\xa9'):
+            newStr+='é'
+            lastByte=c
+        elif c == '\x00' or c == '\xc3':
+            lastByte=c
+        else:
+            newStr+=c
+            lastByte=c
+
+    newStr = filter(lambda c: c in printable, newStr)
+    return newStr
+
+
 def cleanTitle(title):
     if "[HD]" in title:
         title = title[:title.find("[HD]")]
-    title = title.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","?")
-    title = title.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß").replace("&euml;","ë").replace("&Euml;","Ë")
-    title = title.replace('&quot;','"').replace('&gt;','>').replace('&lt;','<').replace("&euro;","¤").replace("&ntilde;","ñ").replace("&pound;","£").replace("&sect;","§").replace("&oslash;","ø").replace("&euml;","ë")
-    title = title.replace("&acirc;","â").replace("&aacute;","á").replace("&agrave;","à").replace("&ecirc;","ê").replace("&eacute;","é").replace("&egrave;","è").replace("&icirc;","î").replace("&iacute;","í").replace("&igrave;","ì")
-    title = title.replace("&ocirc;","ô").replace("&oacute;","ó").replace("&ograve;","ò").replace("&ucirc;","û").replace("&uacute;","ú").replace("&ugrave;","ù").replace("&ccedil;","ç")
-    return title.replace("\xe4","ä").replace("\xe9","é").replace("\xf6","ö").replace("\xfc","ü").replace("\xc4","Ä").replace("\xd6","Ö").replace("\xdc","Ü").replace("\xdf","ß").strip()
+    return cleanInput(title)
 
 
 def cleanSeasonTitle(title):

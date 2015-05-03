@@ -21,6 +21,7 @@
         <setting id="preferAmazonTrailer" type="bool" label="30120" default="false"/>
         <setting id="updateDB" type="bool" label="30114" default="true"/>
         <setting id="showNotification" type="bool" label="30122" default="true"/>
+        <setting id="showAvailability" type="bool" label="30998" default="false"/>
         <setting type="sep" />
         <setting label="30115" type="action" action="RunPlugin(plugin://plugin.video.prime_instant/?mode=deleteCache)"/>
         <setting label="30116" type="action" action="RunPlugin(plugin://plugin.video.prime_instant/?mode=deleteCookies)"/>
