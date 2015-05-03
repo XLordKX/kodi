@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.prime_instant" name="Amazon Prime Instant Video" version="1.0.3-r1" provider-name="XLordKX">
+<addon id="plugin.video.prime_instant" name="Amazon Prime Instant Video" version="1.0.3-alpha4" provider-name="XLordKX">
     <requires>
         <import addon="xbmc.python" version="2.1.0"/>
         <import addon="script.module.mechanize" version="0.2.6"/>
