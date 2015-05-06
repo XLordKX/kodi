@@ -1,3 +1,5 @@
+1.0.7
+- fixed typo, sorry :(
 1.0.6
 - removed all rtmp-streaming
 - http streaming should work for US and UK now (untested!)
