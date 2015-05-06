@@ -729,22 +729,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
             content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif not playTrailer:
-            if len(maxDevicesTimestamp) < maxDevices:
-                maxDevicesTimestamp += [0]
-            elif len(maxDevicesTimestamp) > maxDevices:
-                maxDevicesTimestamp.pop()
-            for i, val in enumerate(maxDevicesTimestamp):
-                if ((int(val) + maxDevicesWaitTime) <= int(time.time())):
-                    content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
-                    if not "SUCCESS" in str(content):
-                        maxDevicesTimestamp[i] = int(val) + 10
-                    elif '$de' in str(content):
-                        ediag = xbmcgui.Dialog()
-                        if (ediag.yesno(translation(30098), translation(30099))):
-                            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&audioTrackId=eng_dialog_0&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
-                    else:
-                        tooManyConnections = False
-                    break
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
             addon.setSetting("maxDevicesTimestamp", str(json.dumps(maxDevicesTimestamp)))
         elif playTrailer:
             try:
@@ -779,13 +764,12 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 if contentT:
                     url = ''
                     for item in contentT:
-                        if not '$' in item['url']:
-                            if selectQuality:
-                                streamTitles.append(str(item['bitrate'])+"kb")
-                                streamURLs.append(item['url'])
-                                url = item['url']
-                            elif item['bitrate']<=maxBitrate:
-                                url = item['url']
+                        if selectQuality:
+                            streamTitles.append(str(item['bitrate'])+"kb")
+                            streamURLs.append(item['url'])
+                            url = item['url']
+                        elif item['bitrate']<=maxBitrate:
+                            url = item['url']
                     if not rtmpMain in url:
                         try:
                             if selectQuality:
@@ -799,14 +783,17 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                                     url = item['url']
                         except:
                             pass
-                    if url and not '$' in url:
+                    if url:
                         if selectQuality:
                             dialog = xbmcgui.Dialog()
                             nr=dialog.select(translation(30059), streamTitles)
                             if nr>=0:
                               url=streamURLs[nr]
                         if url.startswith("rtmpe"):
-                            url = url.replace('rtmpe','rtmp')+' swfVfy=1 swfUrl='+matchSWF[0]+' pageUrl='+urlMain+'/dp/'+videoID+' app='+rtmpMain+'-vod playpath='+url[url.find('mp4:'):]+' tcUrl=rtmpe://'+rtmpMain+'-vodfs.fplive.net:1935/'+rtmpMain+'-vod/'
+                            if "$" in url:
+                                url = 'http://azeufms-vodfs.fplive.net/' + url[url.find('mp4:')+4:]
+                            else:
+                                url = url.replace('rtmpe','rtmp')+' swfVfy=1 swfUrl='+matchSWF[0]+' pageUrl='+urlMain+'/dp/'+videoID+' app='+rtmpMain+'-vod playpath='+url[url.find('mp4:'):]+' tcUrl=rtmpe://'+rtmpMain+'-vodfs.fplive.net:1935/'+rtmpMain+'-vod/'
                             if playTrailer or (selectQuality and cMenu):
                                 listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)
@@ -826,10 +813,6 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 else:
                     diag = xbmcgui.Dialog()
                     diag.ok(translation(30094), translation(30095))
-        else:
-            if tooManyConnections:
-                diag = xbmcgui.Dialog()
-                diag.ok(translation(30096), translation(30097))
     else:
         xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30082)+',10000,'+icon+')')
    
