@@ -1,3 +1,6 @@
+1.0.6
+- removed all rtmp-streaming
+- http streaming should work for US and UK now (untested!)
 1.0.5
 - amazon urls with dollar-sign fixed (thanks to luggi from kodinerds.de)
 1.0.4

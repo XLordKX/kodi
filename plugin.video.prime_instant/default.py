@@ -790,10 +790,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                             if nr>=0:
                               url=streamURLs[nr]
                         if url.startswith("rtmpe"):
-                            if "$" in url:
-                                url = 'http://azeufms-vodfs.fplive.net/' + url[url.find('mp4:')+4:]
-                            else:
-                                url = url.replace('rtmpe','rtmp')+' swfVfy=1 swfUrl='+matchSWF[0]+' pageUrl='+urlMain+'/dp/'+videoID+' app='+rtmpMain+'-vod playpath='+url[url.find('mp4:'):]+' tcUrl=rtmpe://'+rtmpMain+'-vodfs.fplive.net:1935/'+rtmpMain+'-vod/'
+                            url = 'http://'+rtmpMain+'.fplive.net/' + url[url.find('mp4:')+4:]
                             if playTrailer or (selectQuality and cMenu):
                                 listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)
