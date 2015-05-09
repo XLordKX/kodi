@@ -291,6 +291,7 @@ def parseWatchListNew(content):
                 break
 
     dlParams = []
+    showEntries = []
     for entry in elements:
         if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
             match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
@@ -325,6 +326,7 @@ def parseWatchListNew(content):
 
 def parseWatchListOld(content):
     dlParams = []
+    showEntries = []
     spl = content.split('<div class="innerItem"')
     for i in range(1, len(spl), 1):
         entry = spl[i]
@@ -816,26 +818,33 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
 
 def showInfo(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
-    content=opener.open(urlMain+"/dp/"+videoID).read()
+    content=opener.open(urlMain+"/dp/"+videoID+"?_encoding=UTF8").read()
 
-    match=re.compile('\<script[\ \t]+type[\ \t]*=[\ \t]*"application\/ld\+json"\>[\ \t]*(.+?)[\ \t]*\<\/script\>', re.DOTALL).findall(content)
-    jsonstr=cleanInput(match[0])
-    parsed=json.loads(jsonstr)
-    title = parsed["name"]
+    match=re.compile('property="og:title" content="Watch (.+?) Online - Amazon Instant Video"', re.DOTALL).findall(content)
+    title = match[0]
     match=re.compile('class="release-year".*?>(.+?)<', re.DOTALL).findall(content)
     year = match[0]
     title = title+" ("+year+")"
     title = cleanTitle(title)
-    thumb = parsed["thumbnailUrl"].replace(".jpg", "")
+    match=re.compile('property="og:image" content="(.+?)"', re.DOTALL).findall(content)
+    thumb = match[0].replace(".jpg", "")
     thumb = thumb[:thumb.rfind(".")]+".jpg"
-    director = parsed["director"][0]["name"].replace(",",", ")
-    actors = parsed["actor"][0]["name"].replace(",",", ")
+    match=re.compile('"director":.+?"name":"(.+?)"', re.DOTALL).findall(content)
+    director = match[0].replace(",",", ")
+    match=re.compile('"actor":.+?"name":"(.+?)"', re.DOTALL).findall(content)
+    actors = match[0].replace(",",", ")
     match=re.compile('property="og:duration" content="(.+?)"', re.DOTALL).findall(content)
     length = str(int(match[0])/60)+" min."
-    rating = parsed["aggregateRating"]["ratingValue"]
-    ratingCount = parsed["aggregateRating"]["reviewCount"]
-    description = parsed["description"]
-    genre = parsed["genre"]
+    match=re.compile('property="og:rating" content="(.+?)"', re.DOTALL).findall(content)
+    rating = match[0]
+    match=re.compile('property="og:rating_count" content="(.+?)"', re.DOTALL).findall(content)
+    ratingCount = match[0]
+    match=re.compile('property="og:description" content="(.+?)"', re.DOTALL).findall(content)
+    description = cleanTitle(match[0])
+    match=re.compile('"genre":"(.+?)"', re.DOTALL).findall(content)
+    genre = ""
+    if match:
+        genre = cleanTitle(match[0])
     addLink(title, videoID, "playVideo", thumb, videoType="movie", desc=description, duration=length, year=year, mpaa="", director=director, genre=genre, rating=rating)
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
@@ -939,34 +948,39 @@ def login():
 def cleanInput(str):
 
     str = str.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","…")
-    str = str.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß")
-    printable=string.printable+"éäöüÄÖÜß…"
+    str = str.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß").replace("&euml;","ë").replace("&Euml;","Ë")
+    str = str.replace('&quot;','"').replace('&gt;','>').replace('&lt;','<').replace("&euro;","€").replace("&ntilde;","ñ").replace("&pound;","£").replace("&sect;","§").replace("&oslash;","ø")
+    str = str.replace("&acirc;","â").replace("&aacute;","á").replace("&agrave;","à").replace("&ecirc;","ê").replace("&eacute;","é").replace("&egrave;","è").replace("&icirc;","î").replace("&iacute;","í").replace("&igrave;","ì")
+    str = str.replace("&ocirc;","ô").replace("&oacute;","ó").replace("&ograve;","ò").replace("&ucirc;","û").replace("&uacute;","ú").replace("&ugrave;","ù").replace("&ccedil;","ç")
+
+    printable = string.printable+"€£ñêéèëäöüËÄÖÜßâáàôóòûúùîíìøç…"
+    
     newStr=''
     lastByte='\xff'
     for c in str:
         if c == '\xe4' or ( lastByte == '\x00' and c == '\xe4' ) or ( lastByte == '\xc3' and c == '\xa4'):
-            newStr+='ä'
+            newStr+='\xc3\xa4'
             lastByte=c
         elif c == '\xf6' or ( lastByte == '\x00' and c == '\xf6' ) or ( lastByte == '\xc3' and c == '\xb6'):
-            newStr+='ö'
+            newStr+='\xc3\xb6'
             lastByte=c
         elif c == '\xfc' or ( lastByte == '\x00' and c == '\xfc' ) or ( lastByte == '\xc3' and c == '\xbc') or ( lastByte == '\xc3' and ( c != '\xa4' and c != '\xb6' and c != '\x84' and c != '\x69' and c != '\x9c' and c != '\x9f' and c != '\xa9' ) ):
-            newStr+='ü'
+            newStr+='\xc3\xbc'
             lastByte=c
         elif c == '\xc4' or ( lastByte == '\x00' and c == '\xc4' ) or ( lastByte == '\xc3' and c == '\x84'):
-            newStr+='Ä'
+            newStr+='\xc3\x84'
             lastByte=c
         elif c == '\xd6' or ( lastByte == '\x00' and c == '\xd6' ) or ( lastByte == '\xc3' and c == '\x69'):
-            newStr+='Ö'
+            newStr+='\xc3\x96'
             lastByte=c
         elif c == '\xdc' or ( lastByte == '\x00' and c == '\xdc' ) or ( lastByte == '\xc3' and c == '\x9c'):
-            newStr+='Ü'
+            newStr+='\xc3\x9c'
             lastByte=c
         elif c == '\xdf' or ( lastByte == '\x00' and c == '\xdf' ) or ( lastByte == '\xc3' and c == '\x9f'):
-            newStr+='ß'
+            newStr+='\xc3\x9f'
             lastByte=c
         elif c == '\xe9' or ( lastByte == '\x00' and c == '\xe9' ) or ( lastByte == '\xc3' and c == '\xa9'):
-            newStr+='é'
+            newStr+='\xc3\xa9'
             lastByte=c
         elif c == '\x00' or c == '\xc3':
             lastByte=c

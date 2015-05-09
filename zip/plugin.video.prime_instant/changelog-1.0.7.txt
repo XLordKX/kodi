@@ -1,3 +1,6 @@
+1.0.8
+- Fixed TVShows Watchlist (by trkodi1)
+- Fixed ShowDetails (by trkodi1)
 1.0.7
 - fixed typo, sorry :(
 1.0.6
