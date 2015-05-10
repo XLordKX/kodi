@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import urllib
 import urllib2
+import htmllib
 import socket
 import mechanize
 import cookielib
@@ -959,51 +960,18 @@ def login():
 
 
 def cleanInput(str):
-
-    str = str.replace("&amp;","&").replace("&#39;","'").replace("&eacute;","é").replace("&auml;","ä").replace("&ouml;","ö").replace("&uuml;","ü").replace("&Auml;","Ä").replace("&Ouml;","Ö").replace("&Uuml;","Ü").replace("&szlig;","ß").replace("&hellip;","…")
-    str = str.replace("&#233;","é").replace("&#228;","ä").replace("&#246;","ö").replace("&#252;","ü").replace("&#196;","Ä").replace("&#214;","Ö").replace("&#220;","Ü").replace("&#223;","ß").replace("&euml;","ë").replace("&Euml;","Ë")
-    str = str.replace('&quot;','"').replace('&gt;','>').replace('&lt;','<').replace("&euro;","€").replace("&ntilde;","ñ").replace("&pound;","£").replace("&sect;","§").replace("&oslash;","ø")
-    str = str.replace("&acirc;","â").replace("&aacute;","á").replace("&agrave;","à").replace("&ecirc;","ê").replace("&eacute;","é").replace("&egrave;","è").replace("&icirc;","î").replace("&iacute;","í").replace("&igrave;","ì")
-    str = str.replace("&ocirc;","ô").replace("&oacute;","ó").replace("&ograve;","ò").replace("&ucirc;","û").replace("&uacute;","ú").replace("&ugrave;","ù").replace("&ccedil;","ç")
-
-    printable = string.printable+"€£ñêéèëäöüËÄÖÜßâáàôóòûúùîíìøç…"
-    
-    newStr=''
-    lastByte='\xff'
-    for c in str:
-        if c == '\xe4' or ( lastByte == '\x00' and c == '\xe4' ) or ( lastByte == '\xc3' and c == '\xa4'):
-            newStr+='\xc3\xa4'
-            lastByte=c
-        elif c == '\xf6' or ( lastByte == '\x00' and c == '\xf6' ) or ( lastByte == '\xc3' and c == '\xb6'):
-            newStr+='\xc3\xb6'
-            lastByte=c
-        elif c == '\xfc' or ( lastByte == '\x00' and c == '\xfc' ) or ( lastByte == '\xc3' and c == '\xbc') or ( lastByte == '\xc3' and ( c != '\xa4' and c != '\xb6' and c != '\x84' and c != '\x69' and c != '\x9c' and c != '\x9f' and c != '\xa9' ) ):
-            newStr+='\xc3\xbc'
-            lastByte=c
-        elif c == '\xc4' or ( lastByte == '\x00' and c == '\xc4' ) or ( lastByte == '\xc3' and c == '\x84'):
-            newStr+='\xc3\x84'
-            lastByte=c
-        elif c == '\xd6' or ( lastByte == '\x00' and c == '\xd6' ) or ( lastByte == '\xc3' and c == '\x69'):
-            newStr+='\xc3\x96'
-            lastByte=c
-        elif c == '\xdc' or ( lastByte == '\x00' and c == '\xdc' ) or ( lastByte == '\xc3' and c == '\x9c'):
-            newStr+='\xc3\x9c'
-            lastByte=c
-        elif c == '\xdf' or ( lastByte == '\x00' and c == '\xdf' ) or ( lastByte == '\xc3' and c == '\x9f'):
-            newStr+='\xc3\x9f'
-            lastByte=c
-        elif c == '\xe9' or ( lastByte == '\x00' and c == '\xe9' ) or ( lastByte == '\xc3' and c == '\xa9'):
-            newStr+='\xc3\xa9'
-            lastByte=c
-        elif c == '\x00' or c == '\xc3':
-            lastByte=c
-        else:
-            newStr+=c
-            lastByte=c
-
-    newStr = filter(lambda c: c in printable, newStr)
-    return newStr
-
+    print type(str)
+    if type(str) is not unicode:
+        str = unicode(str, "iso-8859-1")
+        xmlc = re.compile('&#(.+?);', re.DOTALL).findall(str)
+        for c in xmlc:
+            str = str.replace("&#"+c+";", unichr(int(c)))
+        p = htmllib.HTMLParser(None)
+        p.save_bgn()
+        p.feed(str)
+        str = p.save_end()
+    str = str.encode("utf-8")
+    return str
 
 def cleanTitle(title):
     if "[HD]" in title:
