@@ -64,6 +64,7 @@ maxBitrate = addon.getSetting("maxBitrate")
 maxBitrate = [300, 600, 900, 1350, 2000, 2500, 4000, 6000, 10000, -1][int(maxBitrate)]
 maxDevices = 3
 maxDevicesWaitTime = 120
+selectLanguage = addon.getSetting("selectLanguage")
 siteVersion = addon.getSetting("siteVersion")
 apiMain = ["atv-ps", "atv-ps-eu", "atv-ps-eu"][int(siteVersion)]
 rtmpMain = ["azusfms", "azeufms", "azeufms"][int(siteVersion)]
@@ -695,13 +696,17 @@ def printLogInline(ptext):
     if (True):
         print(ptext)
 
+def selectLang(content):
+    content = content[content.find('class="dv-toggle-box dv-tb-closed">'):content.find('<span id="dv-mta-submit-announce"')]
+    matchlo = re.compile('<option value="(.+?)".*?>(.+?)</option>', re.DOTALL).findall(content)
+    if len(matchlo) > 0:
+        opt = []
+        for i,val in enumerate(matchlo):
+            opt.append([val[0].strip(), val[1].strip()])
+        return opt
+    return None
+
 def playVideo(videoID, selectQuality=False, playTrailer=False):
-    maxDevicesTimestamp = addon.getSetting("maxDevicesTimestamp")
-    try:
-        maxDevicesTimestamp = json.loads(maxDevicesTimestamp)
-    except:
-        maxDevicesTimestamp = []
-        maxDevicesTimestamp.append(0)
     streamTitles = []
     streamURLs = []
     cMenu = False
@@ -715,24 +720,31 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         hasTrailer = True
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
-        matchSWFUrl=re.compile('<script type="text/javascript" src="(.+?)"', re.DOTALL).findall(content)
-        flashContent=opener.open(matchSWFUrl[0]).read()
         matchTitle=re.compile('"contentRating":".+?","name":"(.+?)"', re.DOTALL).findall(content)
         matchThumb=re.compile('"video":.+?"thumbnailUrl":"(.+?)"', re.DOTALL).findall(content)
         matchToken=re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
-        matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
         matchMID=re.compile('"marketplaceID":"(.+?)"').findall(content)
-        matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
+        avail_langs = selectLang(content)
         if not playTrailer or (playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com"):
             content=opener.open(urlMainS+'/gp/video/streaming/player-token.json?callback=jQuery1640'+''.join(random.choice(string.digits) for x in range(18))+'_'+str(int(time.time()*1000))+'&csrftoken='+urllib.quote_plus(matchToken[0])+'&_='+str(int(time.time()*1000))).read()
             matchToken=re.compile('"token":"(.+?)"', re.DOTALL).findall(content)
         content = ""
-        tooManyConnections = True
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+deviceTypeID+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif not playTrailer:
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+urllib.quote_plus(matchDID[0])+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
-            addon.setSetting("maxDevicesTimestamp", str(json.dumps(maxDevicesTimestamp)))
+            if (selectLanguage == "1") and (avail_langs is not None):
+                dialog = xbmcgui.Dialog()
+                sel_lang = []
+                for val in avail_langs:
+                    sel_lang.append(val[1])
+                lnr = dialog.select(translation(30050), sel_lang)
+                if lnr>=0:
+                    playlanguage = "&audioTrackId=" + avail_langs[lnr][0]
+                else:
+                    playlanguage = ""
+            else:
+                playlanguage = ""
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn'+playlanguage+'&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+deviceTypeID+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif playTrailer:
             try:
                 strT = ""

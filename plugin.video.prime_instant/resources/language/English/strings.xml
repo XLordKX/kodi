@@ -22,6 +22,7 @@
   <string id="30020">1970 - 1979</string>
   <string id="30021">1960 - 1969</string>
   <string id="30022">Up to 1960</string>
+  <string id="30050">Select language</string>
   <string id="30051">Play Trailer</string>
   <string id="30052">Add to My Watchlist</string>
   <string id="30053">Remove from My Watchlist</string>
@@ -74,6 +75,7 @@
   <string id="30121">Show "Pilot Season 2015"</string>
   <string id="30122">Show notification after changing the Watchlist</string>
   <string id="30123">ViewID (Details)</string>
+  <string id="30125">Language</string>
   <string id="30201">General</string>
   <string id="30202">Views</string>
   <string id="30203">Advanced</string>
