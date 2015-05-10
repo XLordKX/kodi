@@ -369,12 +369,13 @@ def listWatchList(url):
         dlParams = parseWatchListOld(content)
 
     videoType = ""
+    print dlParams
     for entry in dlParams:
         videoType = entry['type']
         if entry['type'] == "movie":
             addLinkR(entry['title'], entry['id'], "playVideo", entry['thumb'], entry['type'])
         else:
-            addShowDirR(entry['title'], entry['id'], "playVideo", entry['thumb'], entry['type'])
+            addShowDirR(entry['title'], entry['id'], "listEpisodes", entry['thumb'], entry['type'])
 
     if videoType == "movie":
         xbmcplugin.setContent(pluginhandle, "movies")

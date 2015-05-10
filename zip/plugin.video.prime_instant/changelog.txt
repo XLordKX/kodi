@@ -1,3 +1,6 @@
+1.0.10
+- fixed tvshow watchlist (season was treated like a movie,
+    now opens episode list for 'watchlisted' season
 1.0.9
 - added language selection for movie/tv show with multiple audio tracks
 - added addon settings option for language dialog (ask or default)
