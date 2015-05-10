@@ -262,39 +262,22 @@ def listOriginals():
         xbmc.executebuiltin('Container.SetViewMode(500)')
 
 def parseWatchListNew(content):
-    entries=re.compile('\<div\s+class\s*=\s*"grid-list-item\s+downloadable.+?$', re.DOTALL).findall(content)
-    if entries:
-        entry=entries[0]
-        elements=[]
-
-        # for all entries, do the same
-        while True:
-            # serach for beginning!
-            match=re.compile('^\s*\<div\s+class\s*=\s*"grid-list-item\s+downloadable.*?\>', re.DOTALL).findall(entry)
-            if match:
-                index=entry.find(match[0])+len(match[0])
-                entry=entry[index:]
-                depth=1
-                element=match[0]
-
-                while depth > 0:
-                    match=re.compile('^.*?\<div.*?\>', re.DOTALL).findall(entry)
-                    matchend=re.compile('^.*?\<\/div\>', re.DOTALL).findall(match[0])
-                    if matchend:
-                        entry=entry[len(matchend[0]):]
-                        depth=depth-1
-                        element+=matchend[0]
-                    else:
-                        entry=entry[len(match[0]):]
-                        depth=depth+1
-                        element+=match[0]
-                elements.append(element)
-            else:
-                break
-
     dlParams = []
     showEntries = []
-    for entry in elements:
+    items = []
+    delim = '<div class="grid-list-item'
+    beginarea = content.find(delim)
+    area = content[beginarea:content.find('<script type="text/javascript"', beginarea)]
+    itemc = area.count(delim)
+    for i in range(0, itemc, 1):
+        if (i < itemc):
+            elementend = area.find(delim, 1)
+            items.append(area[:elementend])
+            area = area[elementend:]
+        else:
+            items.append(area)
+    for i in range(0, len(items), 1):
+        entry = items[i]
         if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
             match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
             if match:
@@ -313,17 +296,13 @@ def parseWatchListNew(content):
                         avail=" - " + cleanInput(match[0])
                 title = cleanTitle(title)+avail
                 if videoType=="tv":
-                    title = cleanSeasonTitle(title)+avail
-                    if title in showEntries:
-                        continue
                     showEntries.append(title)
                 match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
                 thumbUrl = ""
                 if match:
                     thumbUrl = match[0].replace(".jpg", "")
                     thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
-                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'thumb':thumbUrl, 'year':''})
-
+                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(title), 'thumb':thumbUrl, 'year':''})
     return dlParams
 
 def parseWatchListOld(content):
@@ -343,16 +322,13 @@ def parseWatchListOld(content):
                 title = match[0]
                 title = cleanTitle(title)
                 if videoType=="tv":
-                    title = cleanSeasonTitle(title)
-                    if title in showEntries:
-                        continue
                     showEntries.append(title)
                 match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
                 thumbUrl = ""
                 if match:
                     thumbUrl = match[0].replace(".jpg", "")
                     thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
-                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'thumb':thumbUrl, 'year':''})
+                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(title), 'thumb':thumbUrl, 'year':''})
     return dlParams
 
 
@@ -370,7 +346,6 @@ def listWatchList(url):
         dlParams = parseWatchListOld(content)
 
     videoType = ""
-    print dlParams
     for entry in dlParams:
         videoType = entry['type']
         if entry['type'] == "movie":
@@ -960,7 +935,6 @@ def login():
 
 
 def cleanInput(str):
-    print type(str)
     if type(str) is not unicode:
         str = unicode(str, "iso-8859-1")
         xmlc = re.compile('&#(.+?);', re.DOTALL).findall(str)
