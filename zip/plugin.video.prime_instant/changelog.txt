@@ -1,3 +1,11 @@
+1.0.15
+- merged parseWatchListOld and parseWatchListNew (by mcflay)
+- watchlist shows purchased episodes (by mcflay) (*untested*)
+- changed url for recently added tv shows
+- fixed script error on 'Currently on TV'
+- removed cleanTitle function call in showInfo for genre (by trkodi1)
+- using HTMLParser.unescape in function cleanInput,
+    previous code did not work properly
 1.0.14
 - fixed another python unicode/str problem in category 'genre' (german umlauts)
 - password is now masked in keyboard at login

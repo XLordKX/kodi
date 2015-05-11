@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import urllib
 import urllib2
-import htmllib
 import socket
 import mechanize
 import cookielib
@@ -19,6 +18,7 @@ import xbmcplugin
 import xbmcgui
 import xbmcaddon
 import xbmcvfs
+from HTMLParser import HTMLParser
 
 addon = xbmcaddon.Addon()
 addonID = addon.getAddonInfo('id')
@@ -127,7 +127,7 @@ def browseMovies():
         if showKids:
             addDir(translation(30007), urlMain+"/gp/search/ajax/?rh=n%3A3010075031%2Cn%3A!3010076031%2Cn%3A3015915031%2Cp_n_theme_browse-bin%3A3015972031%2Cp_85%3A3282148031&ie=UTF8", 'listMovies', "")
         addDir(translation(30008), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3279204031%2Cn%3A!3010076031%2Cn%3A3356018031&sort=date-desc-rank", 'listMovies', "")
-        addDir(translation(30009), urlMain+"/s/?n=4963842031", 'listMovies', "")
+        addDir(translation(30009), urlMain+"/s/?n=4963842031&_encoding=UTF", 'listMovies', "")
         addDir(translation(30999), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3010075031%2Cn%3A3356018031%2Cn%3A4225009031&sort=popularity-rank", 'listMovies', "")
     elif siteVersion=="com":
         addDir(translation(30006), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A2858778011%2Cn%3A7613704011&sort=popularity-rank", 'listMovies', "")
@@ -159,7 +159,7 @@ def browseTV():
         if showKids:
             addDir(translation(30007), urlMain+"/gp/search/ajax/?rh=n%3A3010075031%2Cn%3A!3010076031%2Cn%3A3015916031%2Cp_n_theme_browse-bin%3A3015972031%2Cp_85%3A3282148031&ie=UTF8", 'listShows', "")
         addDir(translation(30010), urlMain+"/gp/search/ajax/?_encoding=UTF8&keywords=[OV]&rh=n%3A3010075031%2Cn%3A3015916031%2Ck%3A[OV]%2Cp_85%3A3282148031&sort=date-desc-rank", 'listShows', "")
-        addDir(translation(30008), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3279204031%2Cn%3A3010075031%2Cn%3A3015916031&sort=date-desc-rank", 'listShows', "")
+        addDir(translation(30008), urlMain+"/gp/search/ajax/?_encoding=UTF8&bbn=3279204031&rh=n%3A3279204031%2Cn%3A3010075031%2Cn%3A3015916031&sort=date-desc-rank", 'listShows', "")
         addDir(translation(30999), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3010075031%2Cn%3A3356019031%2Cn%3A4225009031&sort=popularity-rank", 'listShows', "")
     elif siteVersion=="com":
         addDir(translation(30006), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A2858778011%2Cn%3A7613705011&sort=popularity-rank", 'listShows', "")
@@ -261,13 +261,20 @@ def listOriginals():
     if forceView:
         xbmc.executebuiltin('Container.SetViewMode(500)')
 
-def parseWatchListNew(content):
+def parseWatchList(content):
     dlParams = []
     showEntries = []
     items = []
-    delim = '<div class="grid-list-item'
-    beginarea = content.find(delim)
-    area = content[beginarea:content.find('<script type="text/javascript"', beginarea)]
+    delim = ''
+    oldstyle = False
+    if '<div class="grid-list-item' in content:
+        delim = '<div class="grid-list-item'
+        beginarea = content.find(delim)
+        area = content[beginarea:content.find('<script type="text/javascript"', beginarea)]
+    else:
+        delim = '<div class="innerItem"'
+        beginarea = content.find(delim)
+        area = content[beginarea:]
     itemc = area.count(delim)
     for i in range(0, itemc, 1):
         if (i < itemc):
@@ -278,13 +285,18 @@ def parseWatchListNew(content):
             items.append(area)
     for i in range(0, len(items), 1):
         entry = items[i]
+        if oldstyle:
+            entry = entry[:entry.find('</td>')]
         if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
             match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
             if match:
-                if match[0] == "downloadable_tv_season":
+                if match[0] == "downloadable_tv_season" or match[0] == "tv":
                     videoType = "tv"
-                else:
+                elif match[0] == "downloadable_movie" or match[0] == "movie":
                     videoType = "movie"
+                else:
+                    print match[0]
+                    return
                 match = re.compile('id="(.+?)"', re.DOTALL).findall(entry)
                 videoID = match[0]
                 match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
@@ -305,33 +317,6 @@ def parseWatchListNew(content):
                 dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(title), 'thumb':thumbUrl, 'year':''})
     return dlParams
 
-def parseWatchListOld(content):
-    dlParams = []
-    showEntries = []
-    spl = content.split('<div class="innerItem"')
-    for i in range(1, len(spl), 1):
-        entry = spl[i]
-        entry = entry[:entry.find('</td>')]
-        if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
-            match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
-            if match:
-                videoType = match[0]
-                match = re.compile('id="(.+?)"', re.DOTALL).findall(entry)
-                videoID = match[0]
-                match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
-                title = match[0]
-                title = cleanTitle(title)
-                if videoType=="tv":
-                    showEntries.append(title)
-                match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
-                thumbUrl = ""
-                if match:
-                    thumbUrl = match[0].replace(".jpg", "")
-                    thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
-                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(title), 'thumb':thumbUrl, 'year':''})
-    return dlParams
-
-
 def listWatchList(url):
     content = opener.open(url).read()
     debug(content)
@@ -339,12 +324,7 @@ def listWatchList(url):
     if match:
         addon.setSetting('csrfToken', match[0])
 
-    dlParams = []
-    if "grid-list-item" in content:
-        dlParams = parseWatchListNew(content)
-    else:
-        dlParams = parseWatchListOld(content)
-
+    dlParams = parseWatchList(content)
     videoType = ""
     for entry in dlParams:
         videoType = entry['type']
@@ -396,7 +376,7 @@ def listMovies(url):
             videoID = match[0]
             match1 = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
             match2 = re.compile('class="ilt2">(.+?)<', re.DOTALL).findall(entry)
-            title = ""
+            title = None
             if match1:
                 title = match1[0]
             elif match2:
@@ -583,7 +563,7 @@ def listSeasons(seriesName, seriesID, thumb):
     match = re.compile('<option value="(.+?):.+?data-a-html-content="(.+?)"', re.DOTALL).findall(content)
     if match:
         for seasonID, title in match:
-            if "dv-dropdown-prime" in title:
+            if "dv-dropdown-prime" in title or "dv-sash dv-sash-hd" in title:
                 if "\n" in title:
                     title = title[:title.find("\n")]
                 addSeasonDir(title, seasonID, 'listEpisodes', thumb, seriesName, seriesID)
@@ -809,7 +789,6 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
 def showInfo(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
     content=opener.open(urlMain+"/dp/"+videoID+"?_encoding=UTF8").read()
-
     match=re.compile('property="og:title" content="Watch (.+?) Online - Amazon Instant Video"', re.DOTALL).findall(content)
     title = match[0]
     match=re.compile('class="release-year".*?>(.+?)<', re.DOTALL).findall(content)
@@ -832,9 +811,9 @@ def showInfo(videoID):
     match=re.compile('property="og:description" content="(.+?)"', re.DOTALL).findall(content)
     description = cleanTitle(match[0])
     match=re.compile('"genre":"(.+?)"', re.DOTALL).findall(content)
-    genre = ""
+    genre = u""
     if match:
-        genre = cleanTitle(match[0])
+        genre = match[0]
     addLink(title, videoID, "playVideo", thumb, videoType="movie", desc=description, duration=length, year=year, mpaa="", director=director, genre=genre, rating=rating)
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
@@ -937,19 +916,14 @@ def login():
 
 
 def cleanInput(str):
-    #print type(str)
-    #print str
     if type(str) is not unicode:
         str = unicode(str, "iso-8859-1")
         xmlc = re.compile('&#(.+?);', re.DOTALL).findall(str)
         for c in xmlc:
             str = str.replace("&#"+c+";", unichr(int(c)))
     
-    p = htmllib.HTMLParser(None)
-    p.save_bgn()
-    p.feed(str)
-    str = p.save_end()
-
+    p = HTMLParser()
+    str = p.unescape(str)
     str = str.encode("utf-8")
     return str
 
