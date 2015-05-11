@@ -659,12 +659,13 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
 def listGenres(url, videoType):
     content = opener.open(url).read()
     debug(content)
+    content = unicode(content, "utf-8")
     content = content[content.find('<ul class="column vPage1">'):]
     content = content[:content.find('</div>')]
     match = re.compile('href="(.+?)">.+?>(.+?)</span>.+?>(.+?)<', re.DOTALL).findall(content)
     for url, title, nr in match:
         if videoType=="movie":
-            addDir(cleanTitle(title)+nr.replace("&nbsp;"," "), urlMain+url.replace("/s/","/mn/search/ajax/").replace("&amp;","&"), 'listMovies', "")
+            addDir(cleanTitle(title), urlMain+url.replace("/s/","/mn/search/ajax/").replace("&amp;","&"), 'listMovies', "")
         else:
             addDir(cleanTitle(title), urlMain+url.replace("/s/","/mn/search/ajax/").replace("&amp;","&"), 'listShows', "")
     xbmcplugin.endOfDirectory(pluginhandle)
@@ -912,6 +913,7 @@ def login():
         if keyboard.isConfirmed() and keyboard.getText():
             email = keyboard.getText()
             keyboard = xbmc.Keyboard('', translation(30091), True)
+            keyboard.setHiddenInput(True)
             keyboard.doModal()
             if keyboard.isConfirmed() and keyboard.getText():
                 password = keyboard.getText()
@@ -935,15 +937,19 @@ def login():
 
 
 def cleanInput(str):
+    #print type(str)
+    #print str
     if type(str) is not unicode:
         str = unicode(str, "iso-8859-1")
         xmlc = re.compile('&#(.+?);', re.DOTALL).findall(str)
         for c in xmlc:
             str = str.replace("&#"+c+";", unichr(int(c)))
-        p = htmllib.HTMLParser(None)
-        p.save_bgn()
-        p.feed(str)
-        str = p.save_end()
+    
+    p = htmllib.HTMLParser(None)
+    p.save_bgn()
+    p.feed(str)
+    str = p.save_end()
+
     str = str.encode("utf-8")
     return str
 

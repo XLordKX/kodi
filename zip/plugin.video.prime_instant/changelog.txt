@@ -1,3 +1,6 @@
+1.0.14
+- fixed another python unicode/str problem in category 'genre' (german umlauts)
+- password is now masked in keyboard at login
 1.0.12
 - fixed watchlist shows one season for each tvshow only
 1.0.11
