@@ -301,6 +301,8 @@ def parseWatchList(content):
                 videoID = match[0]
                 match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
                 title = match[0]
+                print type(title)
+                print title
                 avail=''
                 if showAvailability:
                     match = re.compile('\<span\s+class\s*=\s*"packshot-message"\s*\>(.+?)\<\/span\>', re.DOTALL).findall(entry)
@@ -650,10 +652,6 @@ def listGenres(url, videoType):
             addDir(cleanTitle(title), urlMain+url.replace("/s/","/mn/search/ajax/").replace("&amp;","&"), 'listShows', "")
     xbmcplugin.endOfDirectory(pluginhandle)
 
-def printLogInline(ptext):
-    if (True):
-        print(ptext)
-
 def selectLang(content):
     content = content[content.find('class="dv-toggle-box dv-tb-closed">'):content.find('<span id="dv-mta-submit-announce"')]
     matchlo = re.compile('<option value="(.+?)".*?>(.+?)</option>', re.DOTALL).findall(content)
@@ -1002,10 +1000,20 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
 
 
 def debug(content):
-    fh=open(debugFile, "w")
-    fh.write(content)
-    fh.close()
-        
+    log(content, xbmc.LOGDEBUG)
+
+def log(msg, level=xbmc.LOGNOTICE):
+    xbmc.log('%s: %s' % (addonID, msg), level)
+    """
+    xbmc.LOGDEBUG = 0
+    xbmc.LOGERROR = 4
+    xbmc.LOGFATAL = 6
+    xbmc.LOGINFO = 1
+    xbmc.LOGNONE = 7
+    xbmc.LOGNOTICE = 2
+    xbmc.LOGSEVERE = 5
+    xbmc.LOGWARNING = 3
+    """
 
 def parameters_string_to_dict(parameters):
     paramDict = {}
