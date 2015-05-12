@@ -1,10 +1,6 @@
-1.0.17
-- cleaned up code for watchlist (again...)
-- added settings for watchlist tv shows:
-  -- pool tv show seasons or show each season
-  -- added order by 'recently added' or by 'title a-z'
-- default.py, settings.xml, strings.xml (german, english) modified
-    --- please do _not_ just replace your default.py ---
+1.0.18
+- if option for pooling seasons is activated, every tv show in watchlist
+    shows at least one season (by loomes)
 
 ! Important note for US and UK users !
 --------------------------------------------------------------------------------
@@ -15,6 +11,13 @@ files from kodi with activated debugging. If you are using prime instant video
 in US or UK and get any errors or problems while using this addon, please tell
 me and please do not forget your kodi.log! :)
 
+1.0.17
+- cleaned up code for watchlist (again...)
+- added settings for watchlist tv shows:
+  -- pool tv show seasons or show each season
+  -- added order by 'recently added' or by 'title a-z'
+- default.py, settings.xml, strings.xml (german, english) modified
+    --- please do _not_ just replace your default.py ---
 1.0.16
 - changed function 'debug' to log to kodi
 1.0.15

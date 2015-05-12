@@ -88,6 +88,8 @@ userAgent = "Mozilla/5.0 (X11; U; Linux i686; de-DE) AppleWebKit/533.4 (KHTML, l
 opener.addheaders = [('User-agent', userAgent)]
 deviceTypeID = "A324MFXUEZFF7B"
 
+NODEBUG = True
+
 if not os.path.isdir(addonUserDataFolder):
     os.mkdir(addonUserDataFolder)
 if not os.path.isdir(cacheFolder):
@@ -273,6 +275,7 @@ def listWatchList(url):
     showEntries = []
     items = []
     dlParams = []
+    videoType = None
     delim = ''
     oldstyle = False
     if '<div class="grid-list-item' in content:
@@ -566,20 +569,33 @@ def listSeasons(seriesName, seriesID, thumb):
     match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
-    contentMain = content
-    content = content[content.find('<select name="seasonAsinAndRef"'):]
-    content = content[:content.find('</select>')]
-    match = re.compile('<option value="(.+?):.+?data-a-html-content="(.+?)"', re.DOTALL).findall(content)
-    if match:
-        for seasonID, title in match:
-            if "dv-dropdown-prime" in title or "dv-sash dv-sash-hd" in title:
-                if "\n" in title:
-                    title = title[:title.find("\n")]
-                addSeasonDir(title, seasonID, 'listEpisodes', thumb, seriesName, seriesID)
-        xbmcplugin.endOfDirectory(pluginhandle)
-        xbmc.sleep(100)
-        if forceView:
-            xbmc.executebuiltin('Container.SetViewMode('+viewIdSeasons+')')
+    if '<select name="seasonAsinAndRef"' in content:
+        content = content[content.find('<select name="seasonAsinAndRef"'):]
+        content = content[:content.find('</select>')]
+        match = re.compile('<option value="(.+?):.+?data-a-html-content="(.+?)"', re.DOTALL).findall(content)
+        if match:
+            for seasonID, title in match:
+                if "dv-dropdown-prime" in title or "dv-sash dv-sash-hd" in title:
+                    if "\n" in title:
+                        title = title[:title.find("\n")]
+                    addSeasonDir(title, seasonID, 'listEpisodes', thumb, seriesName, seriesID)
+            xbmcplugin.endOfDirectory(pluginhandle)
+            xbmc.sleep(100)
+            if forceView:
+                xbmc.executebuiltin('Container.SetViewMode('+viewIdSeasons+')')
+    elif '<div class="dv-dropdown-single">' in content:
+        content = content[content.find('<div class="dv-dropdown-single">'):]
+        content = content[:content.find('<li class="selected-episode')]
+        match = re.compile('<div class="dv-dropdown-single">(.+?)<', re.DOTALL).findall(content)
+        if match:
+            for title in match:
+                title = title.strip()
+                if "dv-dropdown-prime" in content or "dv-sash dv-sash-hd" in content:
+                    addSeasonDir(title, seriesID, 'listEpisodes', thumb, seriesName, seriesID)
+            xbmcplugin.endOfDirectory(pluginhandle)
+            xbmc.sleep(100)
+            if forceView:
+                xbmc.executebuiltin('Container.SetViewMode('+viewIdSeasons+')')
     else:
         listEpisodes(seriesID, seriesID, thumb, contentMain)
 
@@ -963,13 +979,13 @@ def cleanTitleTMDB(title):
 def addMovieToLibrary(movieID, title):
     movieFolderName = (''.join(c for c in unicode(title, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
     dir = os.path.join(libraryFolderMovies, movieFolderName)
-    if not os.path.isdir(dir):
+    if not os.path.exists(dir):
         xbmcvfs.mkdir(dir)
         fh = xbmcvfs.File(os.path.join(dir, "movie.strm"), 'w')
         fh.write('plugin://'+addonID+'/?mode=playVideo&url='+movieID)
         fh.close()
     if updateDB:
-        xbmc.executebuiltin('UpdateLibrary(video)')
+        xbmc.executebuiltin('UpdateLibrary(video,"'+dir+'")')
 
 
 def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
@@ -1007,6 +1023,8 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
 
 
 def debug(content):
+    if (NODEBUG):
+        return
     log(content, xbmc.LOGDEBUG)
 
 def log(msg, level=xbmc.LOGNOTICE):
