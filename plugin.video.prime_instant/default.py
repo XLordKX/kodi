@@ -88,7 +88,7 @@ userAgent = "Mozilla/5.0 (X11; U; Linux i686; de-DE) AppleWebKit/533.4 (KHTML, l
 opener.addheaders = [('User-agent', userAgent)]
 deviceTypeID = "A324MFXUEZFF7B"
 
-NODEBUG = True
+NODEBUG = False
 
 if not os.path.isdir(addonUserDataFolder):
     os.mkdir(addonUserDataFolder)

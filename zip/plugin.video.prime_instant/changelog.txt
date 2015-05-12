@@ -1,3 +1,5 @@
+1.0.19
+- accidentally deactivated debugging output from plugin
 1.0.18
 - if option for pooling seasons is activated, every tv show in watchlist
     shows at least one season (by loomes)
