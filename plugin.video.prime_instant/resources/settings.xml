@@ -3,7 +3,10 @@
         <setting id="siteVersion" type="enum" label="30103" values="US|UK|DE" default="0"/>
         <setting id="maxBitrate" type="enum" label="30104" values="360p@300kb|480p@600kb|480p@900kb|480p@1350kb|480p@2000kb|720p@2500kb|720p@4000kb|720p@6000kb|1080p@10000kb|Ask" default="6"/>
         <setting id="selectLanguage" type="enum" label="30125" values="default|Ask" default="0"/>
+        <setting type="sep" />
         <setting id="watchlistOrder" type="enum" label="30107" lvalues="30118|30119" default="0"/>
+        <setting id="watchlistTVOrder" type="enum" label="30127" lvalues="30118|30119" default="1"/>
+        <setting id="useWLSeriesComplete" type="bool" label="30126" default="true"/>
         <setting type="sep" />
         <setting id="showLibrary" type="bool" label="30105" default="false"/>
         <setting id="showKids" type="bool" label="30106" default="true"/>

@@ -59,8 +59,11 @@ showKids = addon.getSetting("showKids") == "true"
 forceView = addon.getSetting("forceView") == "true"
 updateDB = addon.getSetting("updateDB") == "true"
 useTMDb = addon.getSetting("useTMDb") == "true"
+useWLSeriesComplete = addon.getSetting("useWLSeriesComplete") == "true"
 watchlistOrder = addon.getSetting("watchlistOrder")
 watchlistOrder = ["DATE_ADDED_DESC", "TITLE_ASC"][int(watchlistOrder)]
+watchlistTVOrder = addon.getSetting("watchlistTVOrder")
+watchlistTVOrder = ["DATE_ADDED_DESC", "TITLE_ASC"][int(watchlistTVOrder)]
 maxBitrate = addon.getSetting("maxBitrate")
 maxBitrate = [300, 600, 900, 1350, 2000, 2500, 4000, 6000, 10000, -1][int(maxBitrate)]
 maxDevices = 3
@@ -150,9 +153,9 @@ def browseMovies():
 
 
 def browseTV():
-    addDir(translation(30004), urlMain+"/gp/video/watchlist/tv/?ie=UTF8&show=all&sort="+watchlistOrder, 'listWatchList', "")
+    addDir(translation(30004), urlMain+"/gp/video/watchlist/tv/?ie=UTF8&show=all&sort="+watchlistTVOrder, 'listWatchList', "")
     if showLibrary:
-        addDir(translation(30005), urlMain+"/gp/video/library/tv/?ie=UTF8&show=all&sort="+watchlistOrder, 'listWatchList', "")
+        addDir(translation(30005), urlMain+"/gp/video/library/tv/?ie=UTF8&show=all&sort="+watchlistTVOrder, 'listWatchList', "")
     if siteVersion=="de":
         addDir(translation(30006), urlMain+"/gp/search/ajax/?_encoding=UTF8&rh=n%3A3010075031%2Cn%3A3356019031&sort=popularity-rank", 'listShows', "")
         addDir(translation(30011), urlMain+"/gp/search/other/?rh=n%3A3279204031%2Cn%3A!3010076031%2Cn%3A3356019031&pickerToList=theme_browse-bin&ie=UTF8", 'listGenres', "", "tv")
@@ -261,10 +264,15 @@ def listOriginals():
     if forceView:
         xbmc.executebuiltin('Container.SetViewMode(500)')
 
-def parseWatchList(content):
-    dlParams = []
+def listWatchList(url):
+    content = opener.open(url).read()
+    debug(content)
+    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
+    if match:
+        addon.setSetting('csrfToken', match[0])
     showEntries = []
     items = []
+    dlParams = []
     delim = ''
     oldstyle = False
     if '<div class="grid-list-item' in content:
@@ -301,40 +309,39 @@ def parseWatchList(content):
                 videoID = match[0]
                 match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
                 title = match[0]
-                print type(title)
-                print title
-                avail=''
-                if showAvailability:
-                    match = re.compile('\<span\s+class\s*=\s*"packshot-message"\s*\>(.+?)\<\/span\>', re.DOTALL).findall(entry)
-                    if match:
-                        avail=" - " + cleanInput(match[0])
-                title = cleanTitle(title)+avail
-                if videoType=="tv":
-                    showEntries.append(title)
+
+
                 match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
                 thumbUrl = ""
                 if match:
                     thumbUrl = match[0].replace(".jpg", "")
                     thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
-                dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(title), 'thumb':thumbUrl, 'year':''})
-    return dlParams
+                avail=''
+                if showAvailability:
+                    match = re.compile('\<span\s+class\s*=\s*"packshot-message"\s*\>(.+?)\<\/span\>', re.DOTALL).findall(entry)
+                    if match:
+                        avail=" - " + cleanInput(match[0])                        
 
-def listWatchList(url):
-    content = opener.open(url).read()
-    debug(content)
-    match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
-    if match:
-        addon.setSetting('csrfToken', match[0])
+                if videoType=="tv":
+                    if useWLSeriesComplete:
+                        dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'year':''})
+                        title = cleanSeasonTitle(title)+avail
 
-    dlParams = parseWatchList(content)
-    videoType = ""
-    for entry in dlParams:
-        videoType = entry['type']
-        if entry['type'] == "movie":
-            addLinkR(entry['title'], entry['id'], "playVideo", entry['thumb'], entry['type'])
-        else:
-            addShowDirR(entry['title'], entry['id'], "listEpisodes", entry['thumb'], entry['type'])
+                        if title in showEntries:
+                            continue
+                        
+                        addShowDirR(cleanTitleTMDB(title) + avail, videoID, "listSeasons", thumbUrl, videoType)
+                        showEntries.append(title)
+                    else:
+                        title = cleanTitle(title)
+                        dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanTitle(title)), 'year':''})
+                        addShowDirR(cleanTitleTMDB(title) + avail, videoID, "listEpisodes", thumbUrl, videoType)
 
+                else: #movie
+                    title = cleanTitle(title)
+                    dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanTitle(title)), 'year':''})
+                    addLinkR(cleanTitleTMDB(title) + avail, videoID, "playVideo", thumbUrl, videoType)
+                    
     if videoType == "movie":
         xbmcplugin.setContent(pluginhandle, "movies")
     else:
