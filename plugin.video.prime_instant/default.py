@@ -228,7 +228,7 @@ def listOriginals():
         addon.setSetting('csrfToken', match[0])
     content = content[content.find('<map name="pilots'):]
     content = content[:content.find('</map>')]
-    spl = content.split('shape="rect"')
+    #spl = content.split('shape="rect"')
     thumbs = {}
     thumbs['maninthehighcastle'] = 'http://ecx.images-amazon.com/images/I/5114a5G6oQL.jpg'
     thumbs['cocked'] = 'http://ecx.images-amazon.com/images/I/51ky16-xESL.jpg'
@@ -243,12 +243,11 @@ def listOriginals():
     thumbs['stinkyanddirty'] = 'http://ecx.images-amazon.com/images/I/51WzytCUmdL.jpg'
     thumbs['niko'] = 'http://ecx.images-amazon.com/images/I/51XjJrg9JLL.jpg'
     thumbs['justaddmagic'] = 'http://ecx.images-amazon.com/images/I/5159YFd0hQL.jpg'
-    for i in range(1, len(spl), 1):
-        entry = spl[i]
-        match = re.compile("/gp/product/(.+?)/", re.DOTALL).findall(entry)
+    pilotsmatch = re.compile('<area.+?alt="(.+?)".+?href="(.+?)"', re.DOTALL).findall(content)
+    for pilotval in pilotsmatch:
+        match = re.compile("/gp/product/(.+?)/", re.DOTALL).findall(pilotval[1])
         videoID = match[0]
-        match = re.compile('alt="(.+?)"', re.DOTALL).findall(entry)
-        title = match[0]
+        title = pilotval[0]
         title = cleanTitle(title)
         titleT = title.lower().replace(' ', '').strip()
         titleT = titleT.replace("pointofhonour", "pointofhonor")
@@ -260,7 +259,7 @@ def listOriginals():
         thumb = ""
         if titleT in thumbs:
             thumb = thumbs[titleT]
-        addShowDir(title, videoID, "listSeasons", thumb, "tv")
+        addShowDir(title, videoID, "listSeasons", thumb, "tv", showAll=True)
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
     if forceView:
@@ -617,7 +616,7 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
         entry = spl[i]
         entry = entry[:entry.find('</li>')]
         match = re.compile('class="episode-title">(.+?)<', re.DOTALL).findall(entry)
-        if match and ('class="prime-logo-small"' in entry or 'class="episode-status cell-free"' in entry or 'class="episode-status cell-owned"' in entry):
+        if match and ('class="prime-logo-small"' in entry or 'class="episode-status cell-free"' in entry or 'class="episode-status cell-owned"' in entry or 'class="episode-status cell-unavailable"' in entry):
             title = match[0]
             title = cleanTitle(title)
             episodeNr = title[:title.find('.')]
@@ -1064,13 +1063,16 @@ def addDir(name, url, mode, iconimage, videoType=""):
     return ok
 
 
-def addShowDir(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating=""):
+def addShowDir(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating="", showAll = False):
     filename = (''.join(c for c in unicode(url, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
     coverFile = os.path.join(cacheFolderCoversTMDB, filename)
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
     if os.path.exists(coverFile):
         iconimage = coverFile
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(name)
+    sAll = ""
+    if (showAll):
+        sAll = "&showAll=true"
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(name)+sAll
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "year": year, "mpaa": mpaa, "director": director, "genre": genre, "rating": rating})
