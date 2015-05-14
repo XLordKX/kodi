@@ -783,7 +783,10 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                             if nr>=0:
                               url=streamURLs[nr]
                         if url.startswith("rtmpe"):
-                            url = 'http://'+rtmpMain+'-vodfs.fplive.net/' + url[url.find('mp4:')+4:]
+                            urlproto = "rtmpe://"
+                            urlsite = url[len(urlproto):url.find("/", len(urlproto))]
+                            urlrequest = url[url.find('mp4:')+4:]
+                            url = 'http://' + urlsite + "/" + urlrequest
                             if playTrailer or (selectQuality and cMenu):
                                 listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)

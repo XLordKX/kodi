@@ -1,3 +1,5 @@
+1.0.21
+- Streaming URL modified, will no longer use predefined hosts
 1.0.20
 - opening tv shows with watchlist will show all seasons (owned episodes will
     become accessible)
