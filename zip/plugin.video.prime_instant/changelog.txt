@@ -1,3 +1,6 @@
+1.0.20
+- opening tv shows with watchlist will show all seasons (owned episodes will
+    become accessible)
 1.0.19
 - accidentally deactivated debugging output from plugin
 1.0.18

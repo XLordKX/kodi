@@ -333,7 +333,7 @@ def listWatchList(url):
                         if title in showEntries:
                             continue
                         
-                        addShowDirR(cleanTitleTMDB(title) + avail, videoID, "listSeasons", thumbUrl, videoType)
+                        addShowDirR(cleanTitleTMDB(title) + avail, videoID, "listSeasons", thumbUrl, videoType, showAll=True)
                         showEntries.append(title)
                     else:
                         title = cleanTitle(title)
@@ -562,7 +562,7 @@ def listSimilarShows(videoID):
         xbmc.executebuiltin('Container.SetViewMode('+viewIdShows+')')
 
 
-def listSeasons(seriesName, seriesID, thumb):
+def listSeasons(seriesName, seriesID, thumb, showAll = False):
     xbmcplugin.setContent(pluginhandle, "seasons")
     content = opener.open(urlMain+"/gp/product/"+seriesID).read()
     debug(content)
@@ -575,7 +575,7 @@ def listSeasons(seriesName, seriesID, thumb):
         match = re.compile('<option value="(.+?):.+?data-a-html-content="(.+?)"', re.DOTALL).findall(content)
         if match:
             for seasonID, title in match:
-                if "dv-dropdown-prime" in title or "dv-sash dv-sash-hd" in title:
+                if "dv-dropdown-prime" in title or showAll:
                     if "\n" in title:
                         title = title[:title.find("\n")]
                     addSeasonDir(title, seasonID, 'listEpisodes', thumb, seriesName, seriesID)
@@ -590,7 +590,7 @@ def listSeasons(seriesName, seriesID, thumb):
         if match:
             for title in match:
                 title = title.strip()
-                if "dv-dropdown-prime" in content or "dv-sash dv-sash-hd" in content:
+                if "dv-dropdown-prime" in content or showAll:
                     addSeasonDir(title, seriesID, 'listEpisodes', thumb, seriesName, seriesID)
             xbmcplugin.endOfDirectory(pluginhandle)
             xbmc.sleep(100)
@@ -1082,13 +1082,16 @@ def addShowDir(name, url, mode, iconimage, videoType="", desc="", duration="", y
     return ok
 
 
-def addShowDirR(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating=""):
+def addShowDirR(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating="", showAll = False):
     filename = (''.join(c for c in unicode(url, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
     coverFile = os.path.join(cacheFolderCoversTMDB, filename)
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
     if os.path.exists(coverFile):
         iconimage = coverFile
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(name)
+    sAll = ""
+    if (showAll):
+        sAll = "&showAll=true"
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(name)+sAll
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "year": year, "mpaa": mpaa, "director": director, "genre": genre, "rating": rating})
@@ -1193,6 +1196,7 @@ url = urllib.unquote_plus(params.get('url', ''))
 thumb = urllib.unquote_plus(params.get('thumb', ''))
 name = urllib.unquote_plus(params.get('name', ''))
 season = urllib.unquote_plus(params.get('season', ''))
+showAllSeasons = urllib.unquote_plus(params.get('showAll', '')) == "true"
 seriesID = urllib.unquote_plus(params.get('seriesID', ''))
 videoType = urllib.unquote_plus(params.get('videoType', ''))
 selectQuality = urllib.unquote_plus(params.get('selectQuality', ''))
@@ -1226,7 +1230,7 @@ elif mode == 'listDecadesMovie':
 elif mode == 'listOriginals':
     listOriginals()
 elif mode == 'listSeasons':
-    listSeasons(name, url, thumb)
+    listSeasons(name, url, thumb, showAll=showAllSeasons)
 elif mode == 'listEpisodes':
     listEpisodes(seriesID, url, thumb, "", name)
 elif mode == 'deleteCookies':
