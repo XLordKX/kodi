@@ -1,3 +1,9 @@
+1.0.23
+- fixed episode title changed to tv show name after playback
+- fixed title unicode/str problem after playback
+- fixed next page element in movies to not display last six elements from
+    previous page
+- added flash playback as automated fallback
 1.0.22
 - fixed episode list in amazon originals not showing any episodes (by the6day)
 1.0.21

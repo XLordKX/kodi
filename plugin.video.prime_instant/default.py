@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import urllib
+import urlparse
 import urllib2
 import socket
 import mechanize
@@ -88,7 +89,7 @@ userAgent = "Mozilla/5.0 (X11; U; Linux i686; de-DE) AppleWebKit/533.4 (KHTML, l
 opener.addheaders = [('User-agent', userAgent)]
 deviceTypeID = "A324MFXUEZFF7B"
 
-NODEBUG = False
+NODEBUG = True
 
 if not os.path.isdir(addonUserDataFolder):
     os.mkdir(addonUserDataFolder)
@@ -373,13 +374,15 @@ def listMovies(url):
     match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
+    
+    args = urlparse.parse_qs(url[1:])
+    page = args.get('page', None)
+    if page is not None:
+        if int(page[0]) > 1:
+            content = content[content.find('breadcrumb.breadcrumbSearch'):]
+    
     spl = content.split('id="result_')
     dlParams = []
-    match = re.compile('\<\/span\>(\<a class="a-link-normal a-text-normal" href=".+?"\>.+?\<\/a\>)', re.DOTALL).findall(content)
-    if match:
-        textMatch=re.compile('\>(.+?)\<', re.DOTALL).findall(match[0])
-        linkMatch=re.compile('href="(.+?)"\>', re.DOTALL).findall(match[0])
-        addDir(textMatch[0], urlMain+linkMatch[0].replace("&amp;","&"), "listMovies", "DefaultTVShows.png")
     for i in range(1, len(spl), 1):
         entry = spl[i]
         match = re.compile('asin="(.+?)"', re.DOTALL).findall(entry)
@@ -698,7 +701,16 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         hasTrailer = True
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
-        matchTitle=re.compile('"contentRating":".+?","name":"(.+?)"', re.DOTALL).findall(content)
+        # prepare swf contents as fallback
+        matchSWFUrl=re.compile('src="(.+?webplayer.+?webplayer.+?js)"', re.DOTALL).findall(content)
+        flashContent=opener.open(matchSWFUrl[0]).read()
+        matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
+        matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
+        
+        if '"episode":{"name":"' in content:
+            matchTitle=re.compile('"episode":{"name":"(.+?)"', re.DOTALL).findall(content)
+        else:
+            matchTitle=re.compile('"contentRating":".+?","name":"(.+?)"', re.DOTALL).findall(content)
         matchThumb=re.compile('"video":.+?"thumbnailUrl":"(.+?)"', re.DOTALL).findall(content)
         matchToken=re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
         matchMID=re.compile('"marketplaceID":"(.+?)"').findall(content)
@@ -762,8 +774,10 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                             url = item['url']
                         elif item['bitrate']<=maxBitrate:
                             url = item['url']
-                    if not rtmpMain in url:
-                        try:
+                    if not rtmpMain in url or ("mp4?" in url and "auth=" in url):
+                        debug("no azvod server in list 0")
+                        debug(contentT)
+                        if len(content['message']['body']['urlSets']['streamingURLInfoSet']) > 1:
                             if selectQuality:
                                 streamTitles = []
                                 streamURLs = []
@@ -773,7 +787,10 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                                     streamURLs.append(item['url'])
                                 elif item['bitrate']<=maxBitrate:
                                     url = item['url']
-                        except:
+                            debug("using alternative list index 1")
+                            debug(content['message']['body']['urlSets']['streamingURLInfoSet'][1]['streamingURLInfo'])
+                        else:
+                            debug("unable to use alternative list, flash playback with rtmp will be used")
                             pass
                     if url:
                         if selectQuality:
@@ -785,12 +802,22 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                             urlproto = "rtmpe://"
                             urlsite = url[len(urlproto):url.find("/", len(urlproto))]
                             urlrequest = url[url.find('mp4:')+4:]
-                            url = 'http://' + urlsite + "/" + urlrequest
+                            if not rtmpMain in urlsite or ("mp4?" in url and "auth=" in url):
+                                debug("Using flash playback")
+                                flash_req1 = url[url.find(urlsite)+len(urlsite) + 1:url.find('/mp4:')]
+                                flash_tcUrl = urlproto + urlsite + ":1935/" + flash_req1 + "/"
+                                flash_app = flash_req1
+                                flash_playpath = url[url.find('mp4:'):]
+                                flash_url = url.replace('rtmpe','rtmp')
+                                url = flash_url+' swfVfy=1 swfUrl='+matchSWF[0]+' pageUrl='+urlMain+'/dp/'+videoID+' app='+flash_app+' playpath='+flash_playpath+' tcUrl=' + flash_tcUrl
+                            else:
+                                debug("Using http playback")
+                                url = 'http://' + urlsite + "/" + urlrequest
                             if playTrailer or (selectQuality and cMenu):
                                 listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)
                             else:
-                                listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
+                                listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0].decode("iso-8859-1").encode("iso-8859-1")), path=url, thumbnailImage=thumbUrl)
                                 xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
                         elif url.startswith("http"):
                             dialog = xbmcgui.Dialog()
