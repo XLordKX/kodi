@@ -49,7 +49,6 @@ defaultFanart = os.path.join(addonFolderResources, "fanart.png")
 libraryFolder = os.path.join(addonUserDataFolder, "library")
 libraryFolderMovies = os.path.join(libraryFolder, "Movies")
 libraryFolderTV = os.path.join(libraryFolder, "TV")
-cookieFile = os.path.join(addonUserDataFolder, "cookies")
 debugFile = os.path.join(addonUserDataFolder, "debug")
 preferAmazonTrailer = addon.getSetting("preferAmazonTrailer") == "true"
 showNotification = addon.getSetting("showNotification") == "true"
@@ -73,7 +72,8 @@ selectLanguage = addon.getSetting("selectLanguage")
 siteVersion = addon.getSetting("siteVersion")
 apiMain = ["atv-ps", "atv-ps-eu", "atv-ps-eu"][int(siteVersion)]
 rtmpMain = ["azusfms", "azeufms", "azeufms"][int(siteVersion)]
-siteVersion = ["com", "co.uk", "de"][int(siteVersion)]
+siteVersionsList = ["com", "co.uk", "de"]
+siteVersion = siteVersionsList[int(siteVersion)]
 viewIdMovies = addon.getSetting("viewIdMovies")
 viewIdShows = addon.getSetting("viewIdShows")
 viewIdSeasons = addon.getSetting("viewIdSeasons")
@@ -83,30 +83,15 @@ urlMain = "http://www.amazon."+siteVersion
 urlMainS = "https://www.amazon."+siteVersion
 addon.setSetting('email', '')
 addon.setSetting('password', '')
-
-opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-userAgent = "Mozilla/5.0 (X11; U; Linux i686; de-DE) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
-opener.addheaders = [('User-agent', userAgent)]
 deviceTypeID = "A324MFXUEZFF7B"
 
-NODEBUG = True
+cookieFile = os.path.join(addonUserDataFolder, siteVersion + ".cookies")
 
-if not os.path.isdir(addonUserDataFolder):
-    os.mkdir(addonUserDataFolder)
-if not os.path.isdir(cacheFolder):
-    os.mkdir(cacheFolder)
-if not os.path.isdir(cacheFolderCoversTMDB):
-    os.mkdir(cacheFolderCoversTMDB)
-if not os.path.isdir(cacheFolderFanartTMDB):
-    os.mkdir(cacheFolderFanartTMDB)
-if not os.path.isdir(libraryFolder):
-    os.mkdir(libraryFolder)
-if not os.path.isdir(libraryFolderMovies):
-    os.mkdir(libraryFolderMovies)
-if not os.path.isdir(libraryFolderTV):
-    os.mkdir(libraryFolderTV)
-if os.path.exists(cookieFile):
-    cj.load(cookieFile)
+NODEBUG = False
+
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
+opener.addheaders = [('User-agent', userAgent)]
 
 
 
@@ -696,13 +681,18 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
     if maxBitrate==-1:
         selectQuality = True
     content=opener.open(urlMain+"/dp/"+videoID).read()
+    if login(content, statusOnly=True) == "none":
+        qlogin = login()
+        if qlogin == "noprime" or qlogin == "prime":
+            content=opener.open(urlMain+"/dp/"+videoID).read()
+    
     hasTrailer = False
     if '"hasTrailer":true' in content:
         hasTrailer = True
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
         # prepare swf contents as fallback
-        matchSWFUrl=re.compile('src="(.+?webplayer.+?webplayer.+?js)"', re.DOTALL).findall(content)
+        matchSWFUrl=re.compile('<script type="text/javascript" src="(.+?webplayer.+?webplayer.+?js)"', re.DOTALL).findall(content)
         flashContent=opener.open(matchSWFUrl[0]).read()
         matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
         matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
@@ -720,7 +710,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
             matchToken=re.compile('"token":"(.+?)"', re.DOTALL).findall(content)
         content = ""
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+deviceTypeID+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif not playTrailer:
             if (selectLanguage == "1") and (avail_langs is not None):
                 dialog = xbmcgui.Dialog()
@@ -734,7 +724,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                     playlanguage = ""
             else:
                 playlanguage = ""
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn'+playlanguage+'&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+deviceTypeID+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn'+playlanguage+'&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
         elif playTrailer:
             try:
                 strT = ""
@@ -814,10 +804,12 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                                 debug("Using http playback")
                                 url = 'http://' + urlsite + "/" + urlrequest
                             if playTrailer or (selectQuality and cMenu):
-                                listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0]), path=url, thumbnailImage=thumbUrl)
+                                title = matchTitle[0].decode("iso-8859-1")
+                                listitem = xbmcgui.ListItem(title, path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)
                             else:
-                                listitem = xbmcgui.ListItem(cleanTitle(matchTitle[0].decode("iso-8859-1").encode("iso-8859-1")), path=url, thumbnailImage=thumbUrl)
+                                title = matchTitle[0].decode("iso-8859-1")
+                                listitem = xbmcgui.ListItem(title, path=url, thumbnailImage=thumbUrl)
                                 xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
                         elif url.startswith("http"):
                             dialog = xbmcgui.Dialog()
@@ -929,13 +921,19 @@ def removeFromQueue(videoID, videoType):
         xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30089)+',3000,'+icon+')')
 
 
-def login():
-    content = opener.open(urlMain).read()
-    if '"isPrime":1' in content:
+def login(content = None, statusOnly = False):
+    if content is None:
+        content = opener.open(urlMain).read() # ","isPrime":0
+    signoutmatch = re.compile("declare\('config.signOutText',(.+?)\);", re.DOTALL).findall(content)
+    if '","isPrime":1' in content: # 
         return "prime"
-    elif 'id="nav-item-signout"' in content:
+    elif signoutmatch[0].strip() != "null":
         return "noprime"
     else:
+        if statusOnly:
+            return "none"
+
+        deleteCookies()
         content = ""
         keyboard = xbmc.Keyboard('', translation(30090))
         keyboard.doModal()
@@ -956,10 +954,12 @@ def login():
                 br["password"] = password
                 content = br.submit().read()
                 cj.save(cookieFile)
+                cj.load(cookieFile)
                 content = opener.open(urlMain).read()
-        if '"isPrime":1' in content:
+        signoutmatch = re.compile("declare\('config.signOutText',(.+?)\);", re.DOTALL).findall(content)
+        if '","isPrime":1' in content: # 
             return "prime"
-        elif 'id="nav-item-signout"' in content:
+        elif signoutmatch[0].strip() != "null":
             return "noprime"
         else:
             return "none"
@@ -1232,6 +1232,30 @@ showAllSeasons = urllib.unquote_plus(params.get('showAll', '')) == "true"
 seriesID = urllib.unquote_plus(params.get('seriesID', ''))
 videoType = urllib.unquote_plus(params.get('videoType', ''))
 selectQuality = urllib.unquote_plus(params.get('selectQuality', ''))
+
+if not os.path.isdir(addonUserDataFolder):
+    os.mkdir(addonUserDataFolder)
+if not os.path.isdir(cacheFolder):
+    os.mkdir(cacheFolder)
+if not os.path.isdir(cacheFolderCoversTMDB):
+    os.mkdir(cacheFolderCoversTMDB)
+if not os.path.isdir(cacheFolderFanartTMDB):
+    os.mkdir(cacheFolderFanartTMDB)
+if not os.path.isdir(libraryFolder):
+    os.mkdir(libraryFolder)
+if not os.path.isdir(libraryFolderMovies):
+    os.mkdir(libraryFolderMovies)
+if not os.path.isdir(libraryFolderTV):
+    os.mkdir(libraryFolderTV)
+
+if os.path.exists(os.path.join(addonUserDataFolder, "cookies")):
+    os.rename(os.path.join(addonUserDataFolder, "cookies"), cookieFile)
+
+if os.path.exists(cookieFile):
+    cj.load(cookieFile)
+else:
+    login()
+
 
 if mode == 'listMovies':
     listMovies(url)

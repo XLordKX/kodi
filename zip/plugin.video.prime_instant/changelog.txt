@@ -1,3 +1,12 @@
+1.0.24
+- small fix for login issues (now using seperate cookie file for each countrysite)
+- regex for swfurl fixed
+- movie-/episodetitle unicode fix (again and again and again...)
+- check login on starting playback
+- cookiefile gets deleted when not logged in
+- Amazon US changed some movies and tv shows back to DRM/Copy protection with
+    flash. Those are unreadable due to limitations of Kodi(XMBC) with rtmplib
+    (swfverify version 2)
 1.0.23
 - fixed episode title changed to tv show name after playback
 - fixed title unicode/str problem after playback
