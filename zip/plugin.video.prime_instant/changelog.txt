@@ -1,3 +1,5 @@
+1.0.25
+- fixed watchlist not showing all elements
 1.0.24
 - small fix for login issues (now using seperate cookie file for each countrysite)
 - regex for swfurl fixed

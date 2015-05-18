@@ -266,7 +266,7 @@ def listWatchList(url):
     if '<div class="grid-list-item' in content:
         delim = '<div class="grid-list-item'
         beginarea = content.find(delim)
-        area = content[beginarea:content.find('<script type="text/javascript"', beginarea)]
+        area = content[beginarea:content.find('<div id="navFooter">', beginarea)]
     else:
         delim = '<div class="innerItem"'
         beginarea = content.find(delim)
