@@ -1,3 +1,5 @@
+1.0.26
+- added pagination to watchlist
 1.0.25
 - fixed watchlist not showing all elements
 1.0.24

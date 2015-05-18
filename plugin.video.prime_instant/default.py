@@ -330,6 +330,11 @@ def listWatchList(url):
                     dlParams.append({'type':videoType, 'id':videoID, 'title':cleanTitleTMDB(cleanTitle(title)), 'year':''})
                     addLinkR(cleanTitleTMDB(title) + avail, videoID, "playVideo", thumbUrl, videoType)
                     
+                    
+    
+    match_nextpage = re.compile('<a href=".+?dv_web_wtls_pg_nxt.+?&page=(.+?)&.+?">', re.DOTALL).findall(content)
+    if match_nextpage:
+        addDir(translation(30001), url + "&page=" + match_nextpage[0].strip(), "listWatchList", "DefaultTVShows.png")
     if videoType == "movie":
         xbmcplugin.setContent(pluginhandle, "movies")
     else:
