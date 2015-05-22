@@ -1,3 +1,8 @@
+1.0.27
+- fixed bug in translation, deleteCookies and deleteCache were interchanged
+    (corrected settings.xml)
+1.0.26
+- added pagination to watchlist
 1.0.25
 - fixed watchlist not showing all elements
 1.0.24
