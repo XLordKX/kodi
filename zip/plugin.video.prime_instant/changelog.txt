@@ -1,3 +1,5 @@
+1.0.29
+- unicode bug........
 1.0.28
 - fixed another unicode string bug (add movie or tv show to library)
 1.0.27

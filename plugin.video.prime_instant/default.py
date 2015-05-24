@@ -685,11 +685,11 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         cMenu = True
     if maxBitrate==-1:
         selectQuality = True
-    content=opener.open(urlMain+"/dp/"+videoID).read()
+    content=opener.open(urlMain+"/dp/"+videoID + "/?_encoding=UTF8").read()
     if login(content, statusOnly=True) == "none":
         qlogin = login()
         if qlogin == "noprime" or qlogin == "prime":
-            content=opener.open(urlMain+"/dp/"+videoID).read()
+            content=opener.open(urlMain+"/dp/"+videoID + "/?_encoding=UTF8").read()
     
     hasTrailer = False
     if '"hasTrailer":true' in content:
