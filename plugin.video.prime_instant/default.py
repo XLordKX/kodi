@@ -1011,8 +1011,9 @@ def cleanTitleTMDB(title):
 
 
 def addMovieToLibrary(movieID, title):
+    title = title.decode('iso-8859-1').encode('iso-8859-1')
     movieFolderName = (''.join(c for c in unicode(title, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
-    dir = os.path.join(libraryFolderMovies, movieFolderName)
+    dir = os.path.join(libraryFolderMovies, movieFolderName).encode('utf-8')
     if not os.path.exists(dir):
         xbmcvfs.mkdir(dir)
         fh = xbmcvfs.File(os.path.join(dir, "movie.strm"), 'w')
@@ -1024,7 +1025,7 @@ def addMovieToLibrary(movieID, title):
 
 def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
     seriesFolderName = (''.join(c for c in unicode(seriesTitle, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
-    seriesDir = os.path.join(libraryFolderTV, seriesFolderName)
+    seriesDir = os.path.join(libraryFolderTV, seriesFolderName).encode('utf-8')
     if not os.path.isdir(seriesDir):
         xbmcvfs.mkdir(seriesDir)
     content = opener.open(urlMain+"/gp/product/"+seasonID).read()
@@ -1049,7 +1050,7 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
                 seasonNr = "0"+seasonNr
             filename = "S"+seasonNr+"E"+episodeNr+" - "+title+".strm"
             filename = (''.join(c for c in unicode(filename, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
-            fh = xbmcvfs.File(os.path.join(seriesDir, filename), 'w')
+            fh = xbmcvfs.File(os.path.join(seriesDir, filename).encode('utf-8'), 'w')
             fh.write('plugin://'+addonID+'/?mode=playVideo&url='+episodeID)
             fh.close()
     if updateDB:
