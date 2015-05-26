@@ -697,11 +697,17 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
         # prepare swf contents as fallback
+        noFlash = False # this var does not specify if player uses http or rtmp!!!
         matchSWFUrl=re.compile('<script type="text/javascript" src="(.+?webplayer.+?webplayer.+?js)"', re.DOTALL).findall(content)
-        flashContent=opener.open(matchSWFUrl[0]).read()
-        matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
-        matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
-        
+        if matchSWFUrl:
+            flashContent=opener.open(matchSWFUrl[0]).read()
+            matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
+            matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
+            if not matchDID:
+                matchDID = [deviceTypeID]
+        else:
+            noFlash = True
+            matchDID = [deviceTypeID]
         if '"episode":{"name":"' in content:
             matchTitle=re.compile('"episode":{"name":"(.+?)"', re.DOTALL).findall(content)
         else:
@@ -797,7 +803,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                             urlproto = "rtmpe://"
                             urlsite = url[len(urlproto):url.find("/", len(urlproto))]
                             urlrequest = url[url.find('mp4:')+4:]
-                            if not rtmpMain in urlsite or ("mp4?" in url and "auth=" in url):
+                            if (not rtmpMain in urlsite or ("mp4?" in url and "auth=" in url)) and not noFlash:
                                 debug("Using flash playback")
                                 flash_req1 = url[url.find(urlsite)+len(urlsite) + 1:url.find('/mp4:')]
                                 flash_tcUrl = urlproto + urlsite + ":1935/" + flash_req1 + "/"
