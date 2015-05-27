@@ -1,3 +1,6 @@
+1.0.31
+- Amazon Trailers fixed
+- Youtube Trailers fixed (thx to foben)
 1.0.30
 - changes to amazon website rolling out, this fixes matchSWF
 1.0.29

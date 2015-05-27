@@ -692,7 +692,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
             content=opener.open(urlMain+"/dp/"+videoID + "/?_encoding=UTF8").read()
     
     hasTrailer = False
-    if '"hasTrailer":true' in content:
+    if '&quot;playTrailer&quot;:true' in content:
         hasTrailer = True
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
@@ -722,6 +722,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         content = ""
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
             content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            selectQuality = True
         elif not playTrailer:
             if (selectLanguage == "1") and (avail_langs is not None):
                 dialog = xbmcgui.Dialog()
@@ -741,10 +742,15 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 strT = ""
                 if siteVersion=="de":
                     strT = "+german"
-                contentT = opener.open("http://gdata.youtube.com/feeds/api/videos?vq="+cleanTitle(matchTitle[0]).replace(" ", "+")+"+trailer"+strT+"&racy=include&orderby=relevance").read()
-                match = re.compile('<id>http://gdata.youtube.com/feeds/api/videos/(.+?)</id>', re.DOTALL).findall(contentT.split('<entry>')[1])
-                xbmc.Player().play("plugin://plugin.video.youtube/?path=/root/video&action=play_video&videoid=" + match[0])
-            except:
+                myYoutubeApiKey = "AIzaSyBOIt4tcYjHOvsLvwaH20BhHmBpPkb8eqY"
+                queryString = cleanTitle(matchTitle[0]).replace(" ", "+")+"+trailer"+strT
+                queryUrl = "https://www.googleapis.com/youtube/v3/search?part=id&q=" + queryString + "&order=relevance&key=" + myYoutubeApiKey
+                searchRes = opener.open(queryUrl).read()
+                searchResJson = json.loads(searchRes)
+                vidid = searchResJson['items'][0]['id']['videoId']
+                xbmc.Player().play("plugin://plugin.video.youtube/?path=/root/video&action=play_video&videoid=" + vidid)
+            except Exception as e:
+                xbmc.executebuiltin('XBMC.Notification(Info:,' + str(e) + ',10000,'+icon+')')
                 pass
         debug(content)
         if content:
