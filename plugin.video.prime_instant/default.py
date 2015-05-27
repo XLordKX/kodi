@@ -741,10 +741,15 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 strT = ""
                 if siteVersion=="de":
                     strT = "+german"
-                contentT = opener.open("http://gdata.youtube.com/feeds/api/videos?vq="+cleanTitle(matchTitle[0]).replace(" ", "+")+"+trailer"+strT+"&racy=include&orderby=relevance").read()
-                match = re.compile('<id>http://gdata.youtube.com/feeds/api/videos/(.+?)</id>', re.DOTALL).findall(contentT.split('<entry>')[1])
-                xbmc.Player().play("plugin://plugin.video.youtube/?path=/root/video&action=play_video&videoid=" + match[0])
-            except:
+                myYoutubeApiKey = "your Youtube key here"
+                queryString = cleanTitle(matchTitle[0]).replace(" ", "+")+"+trailer"+strT
+                queryUrl = "https://www.googleapis.com/youtube/v3/search?part=id&q=" + queryString + "&order=relevance&key=" + myYoutubeApiKey
+                searchRes = opener.open(queryUrl).read()
+                searchResJson = json.loads(searchRes)
+                vidid = searchResJson['items'][0]['id']['videoId']
+                xbmc.Player().play("plugin://plugin.video.youtube/?path=/root/video&action=play_video&videoid=" + vidid)
+            except Exception as e:
+                xbmc.executebuiltin('XBMC.Notification(Info:,' + str(e) + ',10000,'+icon+')')
                 pass
         debug(content)
         if content:
