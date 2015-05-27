@@ -742,7 +742,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 strT = ""
                 if siteVersion=="de":
                     strT = "+german"
-                myYoutubeApiKey = "AIzaSyBOIt4tcYjHOvsLvwaH20BhHmBpPkb8eqY"
+                myYoutubeApiKey = "your Youtube key here"
                 queryString = cleanTitle(matchTitle[0]).replace(" ", "+")+"+trailer"+strT
                 queryUrl = "https://www.googleapis.com/youtube/v3/search?part=id&q=" + queryString + "&order=relevance&key=" + myYoutubeApiKey
                 searchRes = opener.open(queryUrl).read()
