@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="service.xbmc.primeproxy" name="Prime Proxy" version="0.1.1~alpha1" provider-name="XLordKX">
+<addon id="service.xbmc.primeproxy" name="Prime Proxy" version="0.1.1~alpha2" provider-name="XLordKX">
     <requires>
-        <import addon="xbmc.python" version="2.14"/>
+        <import addon="xbmc.python" version="2.1.0"/>
     </requires>
     <extension point="xbmc.service" library="VariableBitrateServer.py" />
     <extension point="xbmc.addon.metadata">

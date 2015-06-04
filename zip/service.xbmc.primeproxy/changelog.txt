@@ -1,2 +1,4 @@
+0.1.1~alpha2
+- missing .0 in addon.xml
 0.1.1~alpha1
 - Initial experimental release
