@@ -1,0 +1,7 @@
+<settings>
+    <category>
+        <setting id="useDifferentPorts" type="bool" label="Use different Ports" default="false"/>
+        <setting id="usePrimeProxyControlPort" type="number" label="Control Port" enable="eq(-1,true)" default="59910"/>
+        <setting id="usePrimeProxyPort" type="number" label="PrimeProxy Port" enable="eq(-2,true)" default="59950"/>
+    </category>
+</settings>

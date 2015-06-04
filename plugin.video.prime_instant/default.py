@@ -1,5 +1,5 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals
 import urllib
 import urlparse
 import urllib2
@@ -15,25 +15,27 @@ import string
 import random
 import shutil
 import subprocess
+import base64
 import xbmcplugin
 import xbmcgui
 import xbmcaddon
 import xbmcvfs
 from HTMLParser import HTMLParser
 
+
 addon = xbmcaddon.Addon()
 addonID = addon.getAddonInfo('id')
 addonFolder = downloadScript = xbmc.translatePath('special://home/addons/'+addonID).decode('utf-8')
 addonUserDataFolder = xbmc.translatePath("special://profile/addon_data/"+addonID).decode('utf-8')
 
-icon = os.path.join(addonFolder, "icon.png").encode('utf-8')
+icon = os.path.join(addonFolder, "icon.png")#.encode('utf-8')
 
 
 def translation(id):
-    return addon.getLocalizedString(id).encode('utf-8')
+    return addon.getLocalizedString(id) #.encode('utf-8')
     
 if not os.path.exists(os.path.join(addonUserDataFolder, "settings.xml")):
-    xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30081)+',10000,'+icon+')')
+    xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30081)+',10000,'+icon+')').encode("utf-8"))
     addon.openSettings()
 
 socket.setdefaulttimeout(30)
@@ -59,6 +61,7 @@ showKids = addon.getSetting("showKids") == "true"
 forceView = addon.getSetting("forceView") == "true"
 updateDB = addon.getSetting("updateDB") == "true"
 useTMDb = addon.getSetting("useTMDb") == "true"
+usePrimeProxy = addon.getSetting("usePrimeProxy") == "true"
 useWLSeriesComplete = addon.getSetting("useWLSeriesComplete") == "true"
 watchlistOrder = addon.getSetting("watchlistOrder")
 watchlistOrder = ["DATE_ADDED_DESC", "TITLE_ASC"][int(watchlistOrder)]
@@ -87,7 +90,7 @@ deviceTypeID = "A324MFXUEZFF7B"
 
 cookieFile = os.path.join(addonUserDataFolder, siteVersion + ".cookies")
 
-NODEBUG = False
+NODEBUG = True
 
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
@@ -104,7 +107,7 @@ def index():
     elif loginResult=="noprime":
         listOriginals()
     elif loginResult=="none":
-        xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30082)+',10000,'+icon+')')
+        xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30082)+',10000,'+icon+')').encode("utf-8"))
 
 
 def browseMovies():
@@ -201,14 +204,14 @@ def listDecadesMovie():
 
 
 def listOriginals():
+    content = ""
     if siteVersion=="de":
-        content = opener.open(urlMain+"/b/?ie=UTF8&node=5457207031").read()
+        content = getUnicodePage(urlMain+"/b/?ie=UTF8&node=5457207031")
     elif siteVersion=="com":
-        content = opener.open(urlMain+"/b/?ie=UTF8&node=9940930011").read()
+        content = getUnicodePage(urlMain+"/b/?ie=UTF8&node=9940930011")
     elif siteVersion=="co.uk":
-        content = opener.open(urlMain+"/b/?ie=UTF8&node=5687760031").read()
+        content = getUnicodePage(urlMain+"/b/?ie=UTF8&node=5687760031")
     debug(content)
-    #match = re.compile("token : '(.+?)'", re.DOTALL).findall(content)
     match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
@@ -252,7 +255,7 @@ def listOriginals():
         xbmc.executebuiltin('Container.SetViewMode(500)')
 
 def listWatchList(url):
-    content = opener.open(url).read()
+    content = getUnicodePage(url)
     debug(content)
     match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -340,11 +343,11 @@ def listWatchList(url):
     else:
         xbmcplugin.setContent(pluginhandle, "tvshows")
     if useTMDb and videoType == "movie":
-        dlParams = json.dumps(unicode(dlParams))
-        xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(str(dlParams))+')')
+        dlParams = json.dumps(dlParams)
+        xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(dlParams.encode("utf8"))+')')
     elif useTMDb:
-        dlParams = json.dumps(unicode(dlParams))
-        xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(str(dlParams))+')')
+        dlParams = json.dumps(dlParams)
+        xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(dlParams.encode("utf8"))+')')
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
     if forceView:
@@ -356,7 +359,7 @@ def listWatchList(url):
 
 def listMovies(url):
     xbmcplugin.setContent(pluginhandle, "movies")
-    content = opener.open(url).read()
+    content = getUnicodePage(url)
     debug(content)
     content = content.replace("\\","")
     if 'id="catCorResults"' in content:
@@ -403,8 +406,8 @@ def listMovies(url):
             else:
                 addLink(title, videoID, "playVideo", thumbUrl, "movie", "", "", year)
     if useTMDb:
-        dlParams = json.dumps(unicode(dlParams))
-        xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(str(dlParams))+')')
+        dlParams = json.dumps(dlParams)
+        xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(dlParams.encode("utf8"))+')')
     match = re.compile('class="pagnNext".*?href="(.+?)"', re.DOTALL).findall(content)
     if match:
         addDir(translation(30001), urlMain+match[0].replace("&amp;","&"), "listMovies", "DefaultTVShows.png")
@@ -416,7 +419,7 @@ def listMovies(url):
 
 def listShows(url):
     xbmcplugin.setContent(pluginhandle, "tvshows")
-    content = opener.open(url).read()
+    content = getUnicodePage(url)
     debug(content)
     content = content.replace("\\","")
     if 'id="catCorResults"' in content:
@@ -461,8 +464,8 @@ def listShows(url):
             else:
                 addShowDir(title, videoID, "listSeasons", thumbUrl, "tv")
     if useTMDb:
-        dlParams = json.dumps(unicode(dlParams))
-        xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(str(dlParams))+')')
+        dlParams = json.dumps(dlParams)
+        xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(dlParams.encode("utf8"))+')')
     match = re.compile('class="pagnNext".*?href="(.+?)"', re.DOTALL).findall(content)
     if match:
         addDir(translation(30001), urlMain+match[0].replace("&amp;","&"), "listShows", "DefaultTVShows.png")
@@ -474,7 +477,7 @@ def listShows(url):
 
 def listSimilarMovies(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
-    content = opener.open(urlMain+"/gp/product/"+videoID).read()
+    content = getUnicodePage(urlMain+"/gp/product/"+videoID)
     debug(content)
     match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -502,8 +505,8 @@ def listSimilarMovies(videoID):
                 if videoType == "movie":
                     addLinkR(title, videoID, "playVideo", thumbUrl, videoType)
     if useTMDb:
-        dlParams = json.dumps(unicode(dlParams))
-        xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(str(dlParams))+')')
+        dlParams = json.dumps(dlParams)
+        xbmc.executebuiltin('XBMC.RunScript('+downloadScript+', '+urllib.quote_plus(dlParams.encode("utf8"))+')')
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
     if forceView:
@@ -512,7 +515,7 @@ def listSimilarMovies(videoID):
 
 def listSimilarShows(videoID):
     xbmcplugin.setContent(pluginhandle, "tvshows")
-    content = opener.open(urlMain+"/gp/product/"+videoID).read()
+    content = getUnicodePage(urlMain+"/gp/product/"+videoID)
     debug(content)
     match = re.compile("token : '(.+?)'", re.DOTALL).findall(content)
     if match:
@@ -546,8 +549,8 @@ def listSimilarShows(videoID):
                     showEntries.append(title)
                     addShowDirR(title, videoID, "listSeasons", thumbUrl, videoType)
     if useTMDb:
-        dlParams = json.dumps(unicode(dlParams))
-        xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(str(dlParams))+')')
+        dlParams = json.dumps(dlParams)
+        xbmc.executebuiltin('XBMC.RunScript('+downloadScriptTV+', '+urllib.quote_plus(dlParams.encode("utf8"))+')')
     xbmcplugin.endOfDirectory(pluginhandle)
     xbmc.sleep(100)
     if forceView:
@@ -556,7 +559,7 @@ def listSimilarShows(videoID):
 
 def listSeasons(seriesName, seriesID, thumb, showAll = False):
     xbmcplugin.setContent(pluginhandle, "seasons")
-    content = opener.open(urlMain+"/gp/product/"+seriesID).read()
+    content = getUnicodePage(urlMain+"/gp/product/"+seriesID)
     debug(content)
     match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -595,7 +598,7 @@ def listSeasons(seriesName, seriesID, thumb, showAll = False):
 def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
     xbmcplugin.setContent(pluginhandle, "episodes")
     if not content:
-        content = opener.open(urlMain+"/gp/product/"+seasonID).read()
+        content = getUnicodePage(urlMain+"/gp/product/"+seasonID)
     debug(content)
     match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -654,9 +657,8 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
 
 
 def listGenres(url, videoType):
-    content = opener.open(url).read()
+    content = getUnicodePage(url)
     debug(content)
-    content = unicode(content, "utf-8")
     content = content[content.find('<ul class="column vPage1">'):]
     content = content[:content.find('</div>')]
     match = re.compile('href="(.+?)">.+?>(.+?)</span>.+?>(.+?)<', re.DOTALL).findall(content)
@@ -677,30 +679,56 @@ def selectLang(content):
         return opt
     return None
 
+def changeStream(videoID):
+    args = urlparse.parse_qs(sys.argv[2][1:])
+    title = args.get('title', videoID)[0]
+    thumburl = args.get('thumbnailimage', '')[0]
+    xbmc.Player().pause()
+    listitem = xbmcgui.ListItem(title, path="http://127.0.0.1:59950/"+videoID + ".mp4", thumbnailImage=thumburl)
+    listitem.setProperty('IsPlayable', 'true')
+    listitem.setProperty('TotalTime', str(xbmc.Player().getTotalTime()))
+    listitem.setProperty('ResumeTime', str(xbmc.Player().getTime()))
+    xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
+
+def helloPrimeProxy():
+    s = socket.create_connection(("127.0.0.1", 59910),1)
+    primeproxyjson = base64.b64encode(json.dumps({"hello": True})) + "\r\n"
+    s.sendall(primeproxyjson)
+    pcdata = ""
+    while not "\r\n" in pcdata:
+        pcdata += s.recv(1024)
+        pass
+    s.close()
+    pcdata = json.loads(base64.b64decode(pcdata.strip()))
+    if pcdata['status'] == "success":
+        return True
+    return False
+
 def playVideo(videoID, selectQuality=False, playTrailer=False):
     streamTitles = []
+    streamBitrates = []
     streamURLs = []
     cMenu = False
     if selectQuality:
         cMenu = True
     if maxBitrate==-1:
         selectQuality = True
-    content=opener.open(urlMain+"/dp/"+videoID + "/?_encoding=UTF8").read()
+    content = getUnicodePage(urlMain+"/dp/"+videoID + "/?_encoding=UTF8")
     if login(content, statusOnly=True) == "none":
         qlogin = login()
         if qlogin == "noprime" or qlogin == "prime":
-            content=opener.open(urlMain+"/dp/"+videoID + "/?_encoding=UTF8").read()
+            content = getUnicodePage(urlMain+"/dp/"+videoID + "/?_encoding=UTF8")
     
     hasTrailer = False
-    if '&quot;playTrailer&quot;:true' in content:
-        hasTrailer = True
+    #if '&quot;playTrailer&quot;:true' in content:
+    #    hasTrailer = True
     matchCID=re.compile('"customerID":"(.+?)"').findall(content)
     if matchCID:
         # prepare swf contents as fallback
         noFlash = False # this var does not specify if player uses http or rtmp!!!
         matchSWFUrl=re.compile('<script type="text/javascript" src="(.+?webplayer.+?webplayer.+?js)"', re.DOTALL).findall(content)
         if matchSWFUrl:
-            flashContent=opener.open(matchSWFUrl[0]).read()
+            flashContent = getUnicodePage(matchSWFUrl[0])
             matchSWF=re.compile('LEGACY_FLASH_SWF="(.+?)"').findall(flashContent)
             matchDID=re.compile('FLASH_GOOGLE_TV="(.+?)"').findall(flashContent)
             if not matchDID:
@@ -708,20 +736,25 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         else:
             noFlash = True
             matchDID = [deviceTypeID]
-        if '"episode":{"name":"' in content:
-            matchTitle=re.compile('"episode":{"name":"(.+?)"', re.DOTALL).findall(content)
-        else:
-            matchTitle=re.compile('"contentRating":".+?","name":"(.+?)"', re.DOTALL).findall(content)
+        #if '"episode":{"name":"' in content:
+        #    matchTitle=re.compile('"episode":{"name":"(.+?)"', re.DOTALL).findall(content)
+        #else:
+        #    matchTitle=re.compile('"contentRating":".+?","name":"(.+?)"', re.DOTALL).findall(content)
         matchThumb=re.compile('"video":.+?"thumbnailUrl":"(.+?)"', re.DOTALL).findall(content)
         matchToken=re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
         matchMID=re.compile('"marketplaceID":"(.+?)"').findall(content)
+        asincontent = getUnicodePage('https://'+apiMain+'.amazon.com/cdp/catalog/GetASINDetails?version=2&format=json&asinlist='+videoID+'&deviceID='+urllib.quote_plus(matchCID[0].encode("utf8"))+'&includeRestrictions=true&deviceTypeID='+matchDID[0]+'&firmware=WIN%2017,0,0,188%20PlugIn&NumberOfResults=1')
+        asininfo = json.loads(asincontent)
+        matchTitle = [asininfo["message"]["body"]["titles"][0]["title"]]
+        hasTrailer = asininfo["message"]["body"]["titles"][0]["trailerAvailable"]
+        asinruntime = asininfo["message"]["body"]["titles"][0]["runtime"]["valueMillis"]
         avail_langs = selectLang(content)
         if not playTrailer or (playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com"):
-            content=opener.open(urlMainS+'/gp/video/streaming/player-token.json?callback=jQuery1640'+''.join(random.choice(string.digits) for x in range(18))+'_'+str(int(time.time()*1000))+'&csrftoken='+urllib.quote_plus(matchToken[0])+'&_='+str(int(time.time()*1000))).read()
+            content = getUnicodePage(urlMainS+'/gp/video/streaming/player-token.json?callback=jQuery1640'+''.join(random.choice(string.digits) for x in range(18))+'_'+str(int(time.time()*1000))+'&csrftoken='+urllib.quote_plus(matchToken[0].encode("utf8"))+'&_='+str(int(time.time()*1000)))
             matchToken=re.compile('"token":"(.+?)"', re.DOTALL).findall(content)
         content = ""
         if playTrailer and hasTrailer and preferAmazonTrailer and siteVersion!="com":
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = getUnicodePage('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingTrailerUrls?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn&marketplaceID='+urllib.quote_plus(matchMID[0].encode("utf8"))+'&token='+urllib.quote_plus(matchToken[0].encode("utf8"))+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0].encode("utf8"))+'&deviceID='+urllib.quote_plus(matchCID[0].encode("utf8"))+str(int(time.time()*1000))+videoID)
             selectQuality = True
         elif not playTrailer:
             if (selectLanguage == "1") and (avail_langs is not None):
@@ -736,16 +769,16 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                     playlanguage = ""
             else:
                 playlanguage = ""
-            content = opener.open('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn'+playlanguage+'&marketplaceID='+urllib.quote_plus(matchMID[0])+'&token='+urllib.quote_plus(matchToken[0])+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0])+'&deviceID='+urllib.quote_plus(matchCID[0])+str(int(time.time()*1000))+videoID).read()
+            content = getUnicodePage('https://'+apiMain+'.amazon.com/cdp/catalog/GetStreamingUrlSets?version=1&format=json&firmware=WIN%2011,7,700,224%20PlugIn'+playlanguage+'&marketplaceID='+urllib.quote_plus(matchMID[0].encode("utf8"))+'&token='+urllib.quote_plus(matchToken[0].encode("utf8"))+'&deviceTypeID='+matchDID[0]+'&asin='+videoID+'&customerID='+urllib.quote_plus(matchCID[0].encode("utf8"))+'&deviceID='+urllib.quote_plus(matchCID[0].encode("utf8"))+str(int(time.time()*1000))+videoID)
         elif playTrailer:
             try:
                 strT = ""
                 if siteVersion=="de":
                     strT = "+german"
-                myYoutubeApiKey = "your Youtube key here"
-                queryString = cleanTitle(matchTitle[0]).replace(" ", "+")+"+trailer"+strT
+                myYoutubeApiKey = cipherKey("bXHbr7m5hoHjuHY0OIx1N/7gfeYPe9ePDewCOb2X8wvn0XOAjy+C")
+                queryString = urllib.quote_plus(cleanTitle(matchTitle[0]).encode("utf-8"))+"+trailer"+strT
                 queryUrl = "https://www.googleapis.com/youtube/v3/search?part=id&q=" + queryString + "&order=relevance&key=" + myYoutubeApiKey
-                searchRes = opener.open(queryUrl).read()
+                searchRes = getUnicodePage(queryUrl)
                 searchResJson = json.loads(searchRes)
                 vidid = searchResJson['items'][0]['id']['videoId']
                 xbmc.Player().play("plugin://plugin.video.youtube/?path=/root/video&action=play_video&videoid=" + vidid)
@@ -754,7 +787,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 pass
         debug(content)
         if content:
-            if not "SUCCESS" in str(content):
+            if not "SUCCESS" in unicode(content):
                 content = json.loads(content)
                 ediag = xbmcgui.Dialog()
                 acode = str(content['message']['body']['code'])
@@ -775,8 +808,9 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                 if contentT:
                     url = ''
                     for item in contentT:
-                        if selectQuality:
+                        if selectQuality or usePrimeProxy:
                             streamTitles.append(str(item['bitrate'])+"kb")
+                            streamBitrates.append(item['bitrate'])
                             streamURLs.append(item['url'])
                             url = item['url']
                         elif item['bitrate']<=maxBitrate:
@@ -785,12 +819,14 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                         debug("no azvod server in list 0")
                         debug(contentT)
                         if len(content['message']['body']['urlSets']['streamingURLInfoSet']) > 1:
-                            if selectQuality:
+                            if selectQuality or usePrimeProxy:
                                 streamTitles = []
+                                streamBitrates = []
                                 streamURLs = []
                             for item in content['message']['body']['urlSets']['streamingURLInfoSet'][1]['streamingURLInfo']:
-                                if selectQuality:
+                                if selectQuality or usePrimeProxy:
                                     streamTitles.append(str(item['bitrate'])+"kb")
+                                    streamBitrates.append(item['bitrate'])
                                     streamURLs.append(item['url'])
                                 elif item['bitrate']<=maxBitrate:
                                     url = item['url']
@@ -821,17 +857,50 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                                 debug("Using http playback")
                                 url = 'http://' + urlsite + "/" + urlrequest
                             if playTrailer or (selectQuality and cMenu):
-                                title = matchTitle[0].decode("iso-8859-1")
+                                title = matchTitle[0]
                                 listitem = xbmcgui.ListItem(title, path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)
                             else:
-                                title = matchTitle[0].decode("iso-8859-1")
-                                listitem = xbmcgui.ListItem(title, path=url, thumbnailImage=thumbUrl)
-                                xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
+                                if not usePrimeProxy or not helloPrimeProxy():
+                                    if usePrimeProxy:
+                                        xbmc.executebuiltin('XBMC.Notification(Info:,' + "PrimeProxy connection failed" + ',10000,'+icon+')')
+                                    title = matchTitle[0]
+                                    listitem = xbmcgui.ListItem(title, path=url, thumbnailImage=thumbUrl)
+                                    xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
+                                else:
+                                    useStreamingIndex = 0
+                                    title = matchTitle[0]
+                                    for w,i in enumerate(streamURLs):
+                                        wurl = i
+                                        wproto = "rtmpe://"
+                                        wsite = wurl[len(wproto):wurl.find("/", len(wproto))]
+                                        wrequest = wurl[wurl.find('mp4:')+4:]
+                                        streamURLs[w] = { 'url' : 'http://' + wsite + "/" + wrequest, 'bitrate': streamBitrates[w]}
+                                        if url == streamURLs[w]['url']:
+                                            useStreamingIndex = w
+                                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                                    primeproxyjson = json.dumps({"asin": videoID, "setProperties": {"StreamingIndex": useStreamingIndex, "Runtime" : asinruntime, "StreamingList": streamURLs, "ThumbnailImage": thumbUrl, "Title": title}})
+                                    primeproxyjson = base64.b64encode(primeproxyjson) + "\r\n"
+                                    s.connect(("127.0.0.1", 59910))
+                                    s.sendall(primeproxyjson)
+                                    pcdata = ""
+                                    while not "\r\n" in pcdata:
+                                        pcdata += s.recv(1024)
+                                        pass
+                                    s.close()
+                                    title = matchTitle[0]
+                                    listitem = xbmcgui.ListItem(title, path="http://127.0.0.1:59950/"+videoID + ".mp4", thumbnailImage=thumbUrl)
+                                    pcdata = json.loads(base64.b64decode(pcdata))
+                                    if "status" in pcdata and pcdata["status"] == "success":
+                                        xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
+                                    else:
+                                        xbmcplugin.setResolvedUrl(pluginhandle, False, listitem)
+
+
                         elif url.startswith("http"):
                             dialog = xbmcgui.Dialog()
                             if dialog.yesno('Info', translation(30085)):
-                                content=opener.open(urlMainS+"/gp/video/settings/ajax/player-preferences-endpoint.html", "rurl="+urllib.quote_plus(urlMainS+"/gp/video/settings")+"&csrfToken="+urllib.quote_plus(addon.getSetting('csrfToken'))+"&aiv-pp-toggle=flash").read()
+                                content = getUnicodePage(urlMainS+"/gp/video/settings/ajax/player-preferences-endpoint.html", "rurl="+urllib.quote_plus(str(urlMainS+"/gp/video/settings","utf8"))+"&csrfToken="+urllib.quote_plus(addon.getSetting('csrfToken').encode("utf8"))+"&aiv-pp-toggle=flash")
                                 xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30086)+',10000,'+icon+')')
                                 playVideo(videoID, selectQuality)
                     else:
@@ -847,7 +916,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
 
 def showInfo(videoID):
     xbmcplugin.setContent(pluginhandle, "movies")
-    content=opener.open(urlMain+"/dp/"+videoID+"?_encoding=UTF8").read()
+    content = getUnicodePage(urlMain+"/dp/"+videoID + "/?_encoding=UTF8")
     match=re.compile('property="og:title" content="Watch (.+?) Online - Amazon Instant Video"', re.DOTALL).findall(content)
     title = match[0]
     match=re.compile('class="release-year".*?>(.+?)<', re.DOTALL).findall(content)
@@ -897,12 +966,47 @@ def deleteCache():
         except:
             shutil.rmtree(cacheFolder)
 
+def getUnicodePage(url):
+
+    req = opener.open(url)
+    content = req.read()
+    if "content-type" in req.headers and "charset=" in req.headers['content-type']:
+        encoding=req.headers['content-type'].split('charset=')[-1]
+        content = unicode(content, encoding)
+    else:
+        content = unicode(content, "utf-8")
+    return content
+
+def getAsciiPage(url):
+    req = opener.open(url)
+    content = req.read()
+    if "content-type" in req.headers and "charset=" in req.headers['content-type']:
+        encoding=req.headers['content-type'].split('charset=')[-1]
+        content = unicode(content, encoding)
+    else:
+        content = unicode(content, "utf-8")
+    return content.encode("utf-8")
+
+def cipherKey(s, key="xlordkx"):
+    key = unicode(key).encode("utf-8")
+    keyarr = map(ord, key)
+    key = b""
+    for i in range(len(keyarr)):
+        key += str(keyarr[i])
+    s = base64.b64decode(s)
+    random.seed(long(key))
+    bytearr = map (ord, s )
+    o = b""
+    for i in range(len(bytearr)):
+        o += (chr(bytearr[i] ^ random.randint(0, 255)))
+    return unicode(o)
 
 def search(type):
     keyboard = xbmc.Keyboard('', translation(30015))
     keyboard.doModal()
     if keyboard.isConfirmed() and keyboard.getText():
-        search_string = keyboard.getText().replace(" ", "+")
+        search_string = unicode(keyboard.getText(), "utf-8").replace(" ", "+")
+        search_string = urllib.quote_plus(search_string.encode("utf8"))
         if siteVersion=="de":
             if type=="movies":
                 listMovies(urlMain+"/mn/search/ajax/?_encoding=UTF8&url=node%3D3356018031&field-keywords="+search_string)
@@ -924,23 +1028,23 @@ def search(type):
 def addToQueue(videoID, videoType):
     if videoType=="tv":
         videoType = "tv_episode"
-    content = opener.open(urlMain+"/gp/video/watchlist/ajax/addRemove.html/ref=sr_1_1_watchlist_add?token="+urllib.quote_plus(addon.getSetting('csrfToken'))+"&dataType=json&prodType="+videoType+"&ASIN="+videoID+"&pageType=Search&subPageType=SASLeafSingleSearch&store=instant-video").read()
+    content = getUnicodePage(urlMain+"/gp/video/watchlist/ajax/addRemove.html/ref=sr_1_1_watchlist_add?token="+urllib.quote_plus(addon.getSetting('csrfToken').encode("utf8"))+"&dataType=json&prodType="+videoType+"&ASIN="+videoID+"&pageType=Search&subPageType=SASLeafSingleSearch&store=instant-video")
     if showNotification:
-        xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30088)+',3000,'+icon+')')
+        xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30088)+',3000,'+icon+')').encode("utf-8"))
 
 
 def removeFromQueue(videoID, videoType):
     if videoType=="tv":
         videoType = "tv_episode"
-    content = opener.open(urlMain+"/gp/video/watchlist/ajax/addRemove.html/ref=sr_1_1_watchlist_remove?token="+urllib.quote_plus(addon.getSetting('csrfToken'))+"&dataType=json&prodType="+videoType+"&ASIN="+videoID+"&pageType=Search&subPageType=SASLeafSingleSearch&store=instant-video").read()
+    content = getUnicodePage(urlMain+"/gp/video/watchlist/ajax/addRemove.html/ref=sr_1_1_watchlist_remove?token="+urllib.quote_plus(addon.getSetting('csrfToken').encode("utf8"))+"&dataType=json&prodType="+videoType+"&ASIN="+videoID+"&pageType=Search&subPageType=SASLeafSingleSearch&store=instant-video")
     xbmc.executebuiltin("Container.Refresh")
     if showNotification:
-        xbmc.executebuiltin('XBMC.Notification(Info:,'+translation(30089)+',3000,'+icon+')')
+        xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30089)+',3000,'+icon+')').encode("utf-8"))
 
 
 def login(content = None, statusOnly = False):
     if content is None:
-        content = opener.open(urlMain).read() # ","isPrime":0
+        content = getUnicodePage(urlMain)
     signoutmatch = re.compile("declare\('config.signOutText',(.+?)\);", re.DOTALL).findall(content)
     if '","isPrime":1' in content: # 
         return "prime"
@@ -954,13 +1058,13 @@ def login(content = None, statusOnly = False):
         content = ""
         keyboard = xbmc.Keyboard('', translation(30090))
         keyboard.doModal()
-        if keyboard.isConfirmed() and keyboard.getText():
-            email = keyboard.getText()
+        if keyboard.isConfirmed() and unicode(keyboard.getText(), "utf-8"):
+            email = unicode(keyboard.getText(), "utf-8")
             keyboard = xbmc.Keyboard('', translation(30091), True)
             keyboard.setHiddenInput(True)
             keyboard.doModal()
-            if keyboard.isConfirmed() and keyboard.getText():
-                password = keyboard.getText()
+            if keyboard.isConfirmed() and unicode(keyboard.getText(), "utf-8"):
+                password = unicode(keyboard.getText(), "utf-8")
                 br = mechanize.Browser()
                 br.set_cookiejar(cj)
                 br.set_handle_robots(False)
@@ -972,7 +1076,7 @@ def login(content = None, statusOnly = False):
                 content = br.submit().read()
                 cj.save(cookieFile)
                 cj.load(cookieFile)
-                content = opener.open(urlMain).read()
+                content = getUnicodePage(urlMain)
         signoutmatch = re.compile("declare\('config.signOutText',(.+?)\);", re.DOTALL).findall(content)
         if '","isPrime":1' in content: # 
             return "prime"
@@ -984,14 +1088,14 @@ def login(content = None, statusOnly = False):
 
 def cleanInput(str):
     if type(str) is not unicode:
-        str = unicode(str, "iso-8859-1")
+        str = unicode(str, "iso-8859-15")
         xmlc = re.compile('&#(.+?);', re.DOTALL).findall(str)
         for c in xmlc:
             str = str.replace("&#"+c+";", unichr(int(c)))
     
     p = HTMLParser()
     str = p.unescape(str)
-    str = str.encode("utf-8")
+    #str = str.encode("utf-8")
     return str
 
 def cleanTitle(title):
@@ -1023,24 +1127,24 @@ def cleanTitleTMDB(title):
 
 
 def addMovieToLibrary(movieID, title):
-    title = title.decode('iso-8859-1').encode('iso-8859-1')
-    movieFolderName = (''.join(c for c in unicode(title, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
-    dir = os.path.join(libraryFolderMovies, movieFolderName).encode('utf-8')
+    #title = title.decode('iso-8859-1').encode('iso-8859-1')
+    movieFolderName = (''.join(c for c in title if c not in '/\\:?"*|<>')).strip(' .')
+    dir = os.path.join(libraryFolderMovies, movieFolderName)
     if not os.path.exists(dir):
-        xbmcvfs.mkdir(dir)
-        fh = xbmcvfs.File(os.path.join(dir, "movie.strm"), 'w')
-        fh.write('plugin://'+addonID+'/?mode=playVideo&url='+movieID)
+        xbmcvfs.mkdir(unicode(dir).encode("iso-8859-1"))
+        fh = xbmcvfs.File(unicode(os.path.join(dir, "movie.strm")).encode("iso-8859-1"), 'w')
+        fh.write(unicode('plugin://'+addonID+'/?mode=playVideo&url='+movieID).encode("utf-8"))
         fh.close()
     if updateDB:
-        xbmc.executebuiltin('UpdateLibrary(video,"'+dir+'")')
+        xbmc.executebuiltin(unicode('UpdateLibrary(video)').encode("utf-8"))
 
 
 def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
-    seriesFolderName = (''.join(c for c in unicode(seriesTitle, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
-    seriesDir = os.path.join(libraryFolderTV, seriesFolderName).encode('utf-8')
+    seriesFolderName = (''.join(c for c in seriesTitle if c not in '/\\:?"*|<>')).strip(' .')
+    seriesDir = os.path.join(libraryFolderTV, seriesFolderName)
     if not os.path.isdir(seriesDir):
-        xbmcvfs.mkdir(seriesDir)
-    content = opener.open(urlMain+"/gp/product/"+seasonID).read()
+        xbmcvfs.mkdir(unicode(seriesDir).encode("iso-8859-1"))
+    content = getUnicodePage(urlMain+"/gp/product/"+seasonID)
     matchSeason = re.compile('"seasonNumber":"(.+?)"', re.DOTALL).findall(content)
     spl = content.split('href="'+urlMain+'/gp/product')
     for i in range(1, len(spl), 1):
@@ -1061,9 +1165,10 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
             if len(seasonNr) == 1:
                 seasonNr = "0"+seasonNr
             filename = "S"+seasonNr+"E"+episodeNr+" - "+title+".strm"
-            filename = (''.join(c for c in unicode(filename, 'utf-8') if c not in '/\\:?"*|<>')).strip(' .')
-            fh = xbmcvfs.File(os.path.join(seriesDir, filename).encode('utf-8'), 'w')
-            fh.write('plugin://'+addonID+'/?mode=playVideo&url='+episodeID)
+            filename = (''.join(c for c in filename if c not in '/\\:?"*|<>')).strip(' .')
+            print type(filename)
+            fh = xbmcvfs.File(unicode(os.path.join(seriesDir, filename)).encode('utf-8'), 'w')
+            fh.write(unicode('plugin://'+addonID+'/?mode=playVideo&url='+episodeID).encode("utf-8"))
             fh.close()
     if updateDB:
         xbmc.executebuiltin('UpdateLibrary(video)')
@@ -1099,7 +1204,7 @@ def parameters_string_to_dict(parameters):
 
 
 def addDir(name, url, mode, iconimage, videoType=""):
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&videoType="+urllib.quote_plus(videoType)
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage.encode("utf8"))+"&videoType="+urllib.quote_plus(videoType.encode("utf8"))
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name})
@@ -1109,7 +1214,7 @@ def addDir(name, url, mode, iconimage, videoType=""):
 
 
 def addShowDir(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating="", showAll = False):
-    filename = (''.join(c for c in unicode(url, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
+    filename = (''.join(c for c in url if c not in '/\\:?"*|<>')).strip()+".jpg"
     coverFile = os.path.join(cacheFolderCoversTMDB, filename)
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
     if os.path.exists(coverFile):
@@ -1117,23 +1222,23 @@ def addShowDir(name, url, mode, iconimage, videoType="", desc="", duration="", y
     sAll = ""
     if (showAll):
         sAll = "&showAll=true"
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(name)+sAll
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage.encode("utf8"))+"&name="+urllib.quote_plus(name.encode("utf8"))+sAll
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "year": year, "mpaa": mpaa, "director": director, "genre": genre, "rating": rating})
     liz.setProperty("fanart_image", fanartFile)
     entries = []
-    entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30052), 'RunPlugin(plugin://'+addonID+'/?mode=addToQueue&url='+urllib.quote_plus(url)+'&videoType='+urllib.quote_plus(videoType)+')',))
-    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url)+')',))
+    entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30052), 'RunPlugin(plugin://'+addonID+'/?mode=addToQueue&url='+urllib.quote_plus(url.encode("utf8"))+'&videoType='+urllib.quote_plus(videoType.encode("utf8"))+')',))
+    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz, isFolder=True)
     return ok
 
 
 def addShowDirR(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating="", showAll = False):
-    filename = (''.join(c for c in unicode(url, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
+    filename = (''.join(c for c in url if c not in '/\\:?"*|<>')).strip()+".jpg"
     coverFile = os.path.join(cacheFolderCoversTMDB, filename)
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
     if os.path.exists(coverFile):
@@ -1141,42 +1246,42 @@ def addShowDirR(name, url, mode, iconimage, videoType="", desc="", duration="", 
     sAll = ""
     if (showAll):
         sAll = "&showAll=true"
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(name)+sAll
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)+"&thumb="+urllib.quote_plus(iconimage.encode("utf8"))+"&name="+urllib.quote_plus(name.encode("utf8"))+sAll
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "year": year, "mpaa": mpaa, "director": director, "genre": genre, "rating": rating})
     liz.setProperty("fanart_image", fanartFile)
     entries = []
-    entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30053), 'RunPlugin(plugin://'+addonID+'/?mode=removeFromQueue&url='+urllib.quote_plus(url)+'&videoType='+urllib.quote_plus(videoType)+')',))
-    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url)+')',))
+    entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30053), 'RunPlugin(plugin://'+addonID+'/?mode=removeFromQueue&url='+urllib.quote_plus(url.encode("utf8"))+'&videoType='+urllib.quote_plus(videoType.encode("utf8"))+')',))
+    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz, isFolder=True)
     return ok
 
 
 def addLink(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating=""):
-    filename = (''.join(c for c in unicode(url, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
+    filename = (''.join(c for c in url if c not in '/\\:?"*|<>')).strip()+".jpg"
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)+"&thumb="+urllib.quote_plus(iconimage)
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)+"&name="+urllib.quote_plus(name.encode("utf8"))+"&thumb="+urllib.quote_plus(iconimage.encode("utf8"))
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "year": year, "mpaa": mpaa, "director": director, "genre": genre, "rating": rating})
     liz.setProperty("fanart_image", fanartFile)
     entries = []
-    entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url)+'&selectQuality=true)',))
+    entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url.encode("utf8"))+'&selectQuality=true)',))
     if videoType != "episode":
-        entries.append((translation(30060), 'Container.Update(plugin://'+addonID+'/?mode=showInfo&url='+urllib.quote_plus(url)+')',))
-        entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url)+')',))
-        entries.append((translation(30052), 'RunPlugin(plugin://'+addonID+'/?mode=addToQueue&url='+urllib.quote_plus(url)+'&videoType='+urllib.quote_plus(videoType)+')',))
+        entries.append((translation(30060), 'Container.Update(plugin://'+addonID+'/?mode=showInfo&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+        entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+        entries.append((translation(30052), 'RunPlugin(plugin://'+addonID+'/?mode=addToQueue&url='+urllib.quote_plus(url.encode("utf8"))+'&videoType='+urllib.quote_plus(videoType.encode("utf8"))+')',))
     if videoType == "movie":
         titleTemp = name.strip()
         if year:
             titleTemp += ' ('+year+')'
-        entries.append((translation(30055), 'RunPlugin(plugin://'+addonID+'/?mode=addMovieToLibrary&url='+urllib.quote_plus(url)+'&name='+urllib.quote_plus(titleTemp)+')',))
-    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url)+')',))
+        entries.append((translation(30055), 'RunPlugin(plugin://'+addonID+'/?mode=addMovieToLibrary&url='+urllib.quote_plus(url.encode("utf8"))+'&name='+urllib.quote_plus(titleTemp.encode("utf8"))+')',))
+    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
     liz.setProperty('IsPlayable', 'true')
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz)
@@ -1184,25 +1289,25 @@ def addLink(name, url, mode, iconimage, videoType="", desc="", duration="", year
 
 
 def addLinkR(name, url, mode, iconimage, videoType="", desc="", duration="", year="", mpaa="", director="", genre="", rating=""):
-    filename = (''.join(c for c in unicode(url, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
+    filename = (''.join(c for c in url if c not in '/\\:?"*|<>')).strip()+".jpg"
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&name="+urllib.quote_plus(name)+"&thumb="+urllib.quote_plus(iconimage)
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)+"&name="+urllib.quote_plus(name.encode("utf8"))+"&thumb="+urllib.quote_plus(iconimage.encode("utf8"))
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "year": year, "mpaa": mpaa, "director": director, "genre": genre, "rating": rating})
     liz.setProperty("fanart_image", fanartFile)
     entries = []
-    entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url)+'&selectQuality=true)',))
-    entries.append((translation(30060), 'Container.Update(plugin://'+addonID+'/?mode=showInfo&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30053), 'RunPlugin(plugin://'+addonID+'/?mode=removeFromQueue&url='+urllib.quote_plus(url)+'&videoType='+urllib.quote_plus(videoType)+')',))
+    entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url.encode("utf8"))+'&selectQuality=true)',))
+    entries.append((translation(30060), 'Container.Update(plugin://'+addonID+'/?mode=showInfo&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30053), 'RunPlugin(plugin://'+addonID+'/?mode=removeFromQueue&url='+urllib.quote_plus(url.encode("utf8"))+'&videoType='+urllib.quote_plus(videoType.encode("utf8"))+')',))
     if videoType == "movie":
         titleTemp = name.strip()
         if year:
             titleTemp += ' ('+year+')'
-        entries.append((translation(30055), 'RunPlugin(plugin://'+addonID+'/?mode=addMovieToLibrary&url='+urllib.quote_plus(url)+'&name='+urllib.quote_plus(titleTemp)+')',))
-    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url)+')',))
-    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url)+')',))
+        entries.append((translation(30055), 'RunPlugin(plugin://'+addonID+'/?mode=addMovieToLibrary&url='+urllib.quote_plus(url.encode("utf8"))+'&name='+urllib.quote_plus(titleTemp.encode("utf8"))+')',))
+    entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url.encode("utf8"))+')',))
+    entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
     liz.setProperty('IsPlayable', 'true')
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz)
@@ -1210,30 +1315,30 @@ def addLinkR(name, url, mode, iconimage, videoType="", desc="", duration="", yea
 
 
 def addSeasonDir(name, url, mode, iconimage, seriesName, seriesID):
-    filename = (''.join(c for c in unicode(seriesID, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
+    filename = (''.join(c for c in seriesID if c not in '/\\:?"*|<>')).strip()+".jpg"
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)+"&seriesID="+urllib.quote_plus(seriesID)+"&thumb="+urllib.quote_plus(iconimage)+"&name="+urllib.quote_plus(seriesName)
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)+"&seriesID="+urllib.quote_plus(seriesID.encode("utf8"))+"&thumb="+urllib.quote_plus(iconimage.encode("utf8"))+"&name="+urllib.quote_plus(seriesName.encode("utf8"))
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "TVShowTitle": seriesName})
     liz.setProperty("fanart_image", fanartFile)
     entries = []
-    entries.append((translation(30056), 'RunPlugin(plugin://'+addonID+'/?mode=addSeasonToLibrary&url='+urllib.quote_plus(url)+'&seriesID='+urllib.quote_plus(seriesID)+'&name='+urllib.quote_plus(seriesName.strip())+')',))
+    entries.append((translation(30056), 'RunPlugin(plugin://'+addonID+'/?mode=addSeasonToLibrary&url='+urllib.quote_plus(url.encode("utf8"))+'&seriesID='+urllib.quote_plus(seriesID.encode("utf8"))+'&name='+urllib.quote_plus(seriesName.strip().encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz, isFolder=True)
     return ok
 
 
 def addEpisodeLink(name, url, mode, iconimage, desc="", duration="", season="", episodeNr="", seriesID="", playcount="", aired="", seriesName=""):
-    filename = (''.join(c for c in unicode(seriesID, 'utf-8') if c not in '/\\:?"*|<>')).strip()+".jpg"
+    filename = (''.join(c for c in seriesID if c not in '/\\:?"*|<>')).strip()+".jpg"
     fanartFile = os.path.join(cacheFolderFanartTMDB, filename)
-    u = sys.argv[0]+"?url="+urllib.quote_plus(url)+"&mode="+str(mode)
+    u = sys.argv[0]+"?url="+urllib.quote_plus(url.encode("utf8"))+"&mode="+str(mode)
     ok = True
     liz = xbmcgui.ListItem(name, iconImage="DefaultTVShows.png", thumbnailImage=iconimage)
     liz.setInfo(type="video", infoLabels={"title": name, "plot": desc, "duration": duration, "season": season, "episode": episodeNr, "aired": aired, "playcount": playcount, "TVShowTitle": seriesName})
     liz.setProperty("fanart_image", fanartFile)
     entries = []
-    entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url)+'&selectQuality=true)',))
+    entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url.encode("utf8"))+'&selectQuality=true)',))
     liz.addContextMenuItems(entries)
     liz.setProperty('IsPlayable', 'true')
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz)
@@ -1269,13 +1374,16 @@ if not os.path.isdir(libraryFolderTV):
 if os.path.exists(os.path.join(addonUserDataFolder, "cookies")):
     os.rename(os.path.join(addonUserDataFolder, "cookies"), cookieFile)
 
+
+
 if os.path.exists(cookieFile):
     cj.load(cookieFile)
 else:
     login()
 
-
-if mode == 'listMovies':
+if mode == 'changeStream':
+    changeStream(url)
+elif mode == 'listMovies':
     listMovies(url)
 elif mode == 'listShows':
     listShows(url)

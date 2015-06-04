@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="plugin.video.prime_instant" name="Amazon Prime Instant Video" version="1.0.31" provider-name="XLordKX">
+<addon id="plugin.video.prime_instant" name="Amazon Prime Instant Video" version="1.1.2" provider-name="XLordKX">
     <requires>
-        <import addon="xbmc.python" version="2.1.0"/>
+        <import addon="xbmc.python" version="2.1"/>
         <import addon="script.module.mechanize" version="0.2.6"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
@@ -10,13 +10,13 @@
     </extension>
     <extension point="xbmc.addon.metadata">
         <platform>all</platform>
-        <summary lang="en">Amazon Prime Instant Video Add-on (US/UK/DE)</summary>
+        <summary lang="en">Amazon Prime Instant Video Add-on (DE/UK)</summary>
         <language></language>
-        <description lang="en">Amazon Prime Instant Video Add-on (US/UK/DE)</description>
+        <description lang="en">Amazon Prime Instant Video Add-on (DE/UK)</description>
         <disclaimer lang="en">Some parts of this addon may not be legal in your country of residence - please check with your local laws before installing.</disclaimer>
         <license>GNU GENERAL PUBLIC LICENSE. Version 2, June 1991</license>
         <source>https://github.com/XLordKX/kodi</source>
-        <forum>http://www.kodinerds.net/index.php/Thread/43912-RELEASE-Amazon-Prime-Instant-Video-US-UK-DE/</forum>
+        <forum>http://www.kodinerds.net</forum>
         <website>http://www.amazon.com</website>
     </extension>
 </addon>
@@ -33,5 +33,23 @@
 		<disclaimer></disclaimer>
 		<platform>all</platform>
 	</extension>
+</addon>
+
+<addon id="service.xbmc.primeproxy" name="Prime Proxy" version="0.1.1~alpha1" provider-name="XLordKX">
+    <requires>
+        <import addon="xbmc.python" version="2.14"/>
+    </requires>
+    <extension point="xbmc.service" library="VariableBitrateServer.py" />
+    <extension point="xbmc.addon.metadata">
+        <platform>all</platform>
+        <summary lang="en"></summary>
+        <language></language>
+        <description lang="en"></description>
+        <disclaimer lang="en">Some parts of this addon may not be legal in your country of residence - please check with your local laws before installing.</disclaimer>
+        <license>Not specified yet</license>
+        <source>https://github.com/XLordKX/kodi</source>
+        <forum>h</forum>
+        <website>http://www.amazon.com</website>
+    </extension>
 </addon>
 </addons>

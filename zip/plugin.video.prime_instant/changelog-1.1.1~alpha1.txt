@@ -1,13 +1,3 @@
-1.1.2
-- switched to unicode as default
-- get titles for videos from other source (avoids problems with umlauts)
-- maaaaaany unicode fixes
-- prepared for experimental use of PrimeProxy addon
-    - install primeproxy addon from xlordkx repository
-    - make sure local ports 55910 and 55950 are useable
-    - in prime_instant addon activate "Use PrimeProxy"
-    ----- PrimeProxy is highly experimental -----
-          use at your own risk
 1.0.22
 - fixed episode list in amazon originals not showing any episodes (by the6day)
 1.0.21
