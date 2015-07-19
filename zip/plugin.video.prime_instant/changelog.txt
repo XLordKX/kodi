@@ -1,3 +1,5 @@
+1.1.4
+- fixed episode list
 1.1.3
 - missing .0 in addon.xml
 1.1.2

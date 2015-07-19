@@ -607,7 +607,11 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
     seasonNr="0"
     if matchSeason:
         seasonNr=matchSeason[0]
-    spl = content.split('href="'+urlMain+'/gp/product')
+    
+    epliststart = content.rfind("<li ", 0, content.find("first-episode"))
+    eplistend = content.find("</ul>", epliststart)
+    content = content[epliststart:eplistend]
+    spl = content.split('<li ')
     for i in range(1, len(spl), 1):
         entry = spl[i]
         entry = entry[:entry.find('</li>')]
@@ -617,7 +621,7 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
             title = cleanTitle(title)
             episodeNr = title[:title.find('.')]
             title = title[title.find('.')+1:].strip()
-            match = re.compile('/(.+?)/', re.DOTALL).findall(entry)
+            match = re.compile('/gp/product/(.+?)/', re.DOTALL).findall(entry)
             episodeID = match[0]
             match = re.compile('<p>.+?</span>\s*(.+?)\s*</p>', re.DOTALL).findall(entry)
             desc = ""
@@ -691,18 +695,20 @@ def changeStream(videoID):
     xbmcplugin.setResolvedUrl(pluginhandle, True, listitem)
 
 def helloPrimeProxy():
-    s = socket.create_connection(("127.0.0.1", 59910),1)
-    primeproxyjson = base64.b64encode(json.dumps({"hello": True})) + "\r\n"
-    s.sendall(primeproxyjson)
-    pcdata = ""
-    while not "\r\n" in pcdata:
-        pcdata += s.recv(1024)
-        pass
-    s.close()
-    pcdata = json.loads(base64.b64decode(pcdata.strip()))
-    if pcdata['status'] == "success":
-        return True
-    return False
+    try:
+        s = socket.create_connection(("127.0.0.1", 59910),1)
+        primeproxyjson = base64.b64encode(json.dumps({"hello": True})) + "\r\n"
+        s.sendall(primeproxyjson)
+        pcdata = ""
+        while not "\r\n" in pcdata:
+            pcdata += s.recv(1024)
+            pass
+        s.close()
+        pcdata = json.loads(base64.b64decode(pcdata.strip()))
+        if pcdata['status'] == "success":
+            return True
+    except:
+        return False
 
 def playVideo(videoID, selectQuality=False, playTrailer=False):
     streamTitles = []
@@ -713,7 +719,8 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
         cMenu = True
     if maxBitrate==-1:
         selectQuality = True
-    content = getUnicodePage(urlMain+"/dp/"+videoID + "/?_encoding=UTF8")
+    try: content = getUnicodePage(urlMain+"/dp/"+videoID + "/?_encoding=UTF8")
+    except: content = getUnicodePage(urlMainS+"/dp/"+videoID + "/?_encoding=UTF8")
     if login(content, statusOnly=True) == "none":
         qlogin = login()
         if qlogin == "noprime" or qlogin == "prime":
@@ -969,12 +976,12 @@ def deleteCache():
 def getUnicodePage(url):
 
     req = opener.open(url)
-    content = req.read()
+    content = ""
     if "content-type" in req.headers and "charset=" in req.headers['content-type']:
         encoding=req.headers['content-type'].split('charset=')[-1]
-        content = unicode(content, encoding)
+        content = unicode(req.read(), encoding)
     else:
-        content = unicode(content, "utf-8")
+        content = unicode(req.read(), "utf-8")
     return content
 
 def getAsciiPage(url):
@@ -1177,7 +1184,8 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
 def debug(content):
     if (NODEBUG):
         return
-    log(content, xbmc.LOGDEBUG)
+    print unicode(content).encode("utf-8")
+    #log(content, xbmc.LOGDEBUG)
 
 def log(msg, level=xbmc.LOGNOTICE):
     xbmc.log('%s: %s' % (addonID, msg), level)
@@ -1271,6 +1279,7 @@ def addLink(name, url, mode, iconimage, videoType="", desc="", duration="", year
     liz.setProperty("fanart_image", fanartFile)
     entries = []
     entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url.encode("utf8"))+'&selectQuality=true)',))
+    #entries.append(("PreCache Video", 'RunPlugin(plugin://'+addonID+'/?mode=precacheVideo&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     if videoType != "episode":
         entries.append((translation(30060), 'Container.Update(plugin://'+addonID+'/?mode=showInfo&url='+urllib.quote_plus(url.encode("utf8"))+')',))
         entries.append((translation(30051), 'RunPlugin(plugin://'+addonID+'/?mode=playTrailer&url='+urllib.quote_plus(url.encode("utf8"))+')',))
