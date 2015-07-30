@@ -1,3 +1,6 @@
+1.1.5
+- fixed video library
+- PrimeProxy removed
 1.1.4
 - fixed episode list
 1.1.3

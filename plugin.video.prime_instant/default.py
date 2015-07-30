@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import urllib
 import urlparse
 import urllib2
+#import requests
 import socket
 import mechanize
 import cookielib
@@ -21,7 +22,7 @@ import xbmcgui
 import xbmcaddon
 import xbmcvfs
 from HTMLParser import HTMLParser
-
+import resources.lib.ScrapeUtils as ScrapeUtils
 
 addon = xbmcaddon.Addon()
 addonID = addon.getAddonInfo('id')
@@ -61,7 +62,7 @@ showKids = addon.getSetting("showKids") == "true"
 forceView = addon.getSetting("forceView") == "true"
 updateDB = addon.getSetting("updateDB") == "true"
 useTMDb = addon.getSetting("useTMDb") == "true"
-usePrimeProxy = addon.getSetting("usePrimeProxy") == "true"
+usePrimeProxy = False #addon.getSetting("usePrimeProxy") == "true"
 useWLSeriesComplete = addon.getSetting("useWLSeriesComplete") == "true"
 watchlistOrder = addon.getSetting("watchlistOrder")
 watchlistOrder = ["DATE_ADDED_DESC", "TITLE_ASC"][int(watchlistOrder)]
@@ -256,7 +257,9 @@ def listOriginals():
 
 def listWatchList(url):
     content = getUnicodePage(url)
-    debug(content)
+    #fp = open(os.path.join(addonFolder, "videolib.html"), "r")
+    #content = unicode(fp.read(), "iso-8859-15")
+    #fp.close()
     match = re.compile('csrf":"(.+?)"', re.DOTALL).findall(content)
     if match:
         addon.setSetting('csrfToken', match[0])
@@ -270,6 +273,10 @@ def listWatchList(url):
         delim = '<div class="grid-list-item'
         beginarea = content.find(delim)
         area = content[beginarea:content.find('<div id="navFooter">', beginarea)]
+    elif '<div class="lib-item"' in content:
+        delim = '<div class="lib-item"'
+        beginarea = content.find(delim)
+        area = content[beginarea:content.find('</table>', beginarea)]
     else:
         delim = '<div class="innerItem"'
         beginarea = content.find(delim)
@@ -286,27 +293,32 @@ def listWatchList(url):
         entry = items[i]
         if oldstyle:
             entry = entry[:entry.find('</td>')]
-        if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-sash' in entry)):
+        if "/library/" in url or ("/watchlist/" in url and ("class='prime-meta'" in entry or 'class="prime-logo"' in entry or "class='item-green'" in entry or 'class="packshot-' in entry)):
             match = re.compile('data-prod-type="(.+?)"', re.DOTALL).findall(entry)
+            if not match:
+                match = re.compile('type="(.+?)" asin=', re.DOTALL).findall(entry)
             if match:
-                if match[0] == "downloadable_tv_season" or match[0] == "tv":
+                if match[0] == "downloadable_tv_season" or match[0] == "tv" or match[0] == "season":
                     videoType = "tv"
                 elif match[0] == "downloadable_movie" or match[0] == "movie":
                     videoType = "movie"
                 else:
                     print match[0]
                     return
-                match = re.compile('id="(.+?)"', re.DOTALL).findall(entry)
+                match = re.compile('" asin="(.+?)"', re.DOTALL).findall(entry)
+                if not match:
+                    match = re.compile('id="(.+?)"', re.DOTALL).findall(entry)
                 videoID = match[0]
-                match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
+                match = re.compile('<img alt="(.+?)" height', re.DOTALL).findall(entry)
+                if not match:
+                    match = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
                 title = match[0]
 
 
                 match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
                 thumbUrl = ""
                 if match:
-                    thumbUrl = match[0].replace(".jpg", "")
-                    thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
+                    thumbUrl = ScrapeUtils.VideoImage().ImageFile(match[0])
                 avail=''
                 if showAvailability:
                     match = re.compile('\<span\s+class\s*=\s*"packshot-message"\s*\>(.+?)\<\/span\>', re.DOTALL).findall(entry)
@@ -376,6 +388,7 @@ def listMovies(url):
     
     spl = content.split('id="result_')
     dlParams = []
+    videoimage = ScrapeUtils.VideoImage()
     for i in range(1, len(spl), 1):
         entry = spl[i]
         match = re.compile('asin="(.+?)"', re.DOTALL).findall(entry)
@@ -398,8 +411,9 @@ def listMovies(url):
                 year = match2[0].strip()
             dlParams.append({'type':'movie', 'id':videoID, 'title':cleanTitleTMDB(cleanSeasonTitle(title)), 'year':year})
             match = re.compile('src="(.+?)"', re.DOTALL).findall(entry)
-            thumbUrl = match[0].replace(".jpg", "")
-            thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
+            #thumbUrl = match[0].replace(".jpg", "")
+            #thumbUrl = thumbUrl[:thumbUrl.rfind(".")]+".jpg"
+            thumbUrl = videoimage.ImageFile(match[0])
             match = re.compile('data-action="s-watchlist-add".+?class="a-button a-button-small(.+?)"', re.DOTALL).findall(entry)
             if match and match[0]==" s-hidden":
                 addLinkR(title, videoID, "playVideo", thumbUrl, "movie", "", "", year)
@@ -868,7 +882,7 @@ def playVideo(videoID, selectQuality=False, playTrailer=False):
                                 listitem = xbmcgui.ListItem(title, path=url, thumbnailImage=thumbUrl)
                                 xbmc.Player().play(url, listitem)
                             else:
-                                if not usePrimeProxy or not helloPrimeProxy():
+                                if not usePrimeProxy: # or not helloPrimeProxy():
                                     if usePrimeProxy:
                                         xbmc.executebuiltin('XBMC.Notification(Info:,' + "PrimeProxy connection failed" + ',10000,'+icon+')')
                                     title = matchTitle[0]

@@ -27,8 +27,6 @@
         <setting id="showNotification" type="bool" label="30122" default="true"/>
         <setting id="showAvailability" type="bool" label="30998" default="false"/>
         <setting type="sep" />
-        <setting id="usePrimeProxy" type="bool" label="Use PrimeProxy" default="false"/>
-        <setting type="sep" />
         <setting label="30116" type="action" action="RunPlugin(plugin://plugin.video.prime_instant/?mode=deleteCache)"/>
         <setting label="30115" type="action" action="RunPlugin(plugin://plugin.video.prime_instant/?mode=deleteCookies)"/>
     </category>
