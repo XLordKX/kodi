@@ -1,3 +1,5 @@
+1.1.6
+- deviceTypeId changed (thx to Sandmann79)
 1.1.5
 - fixed video library
 - PrimeProxy removed

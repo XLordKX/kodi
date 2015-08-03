@@ -4,6 +4,14 @@ import xbmc
 import xbmcaddon
 import os
 
+class Movies():
+    def __init__(self):
+        pass
+
+class AmazonWebContent():
+    def __init__(self):
+        pass
+
 class VideoImage():
     
     def __init__(self):

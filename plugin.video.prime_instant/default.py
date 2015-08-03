@@ -87,7 +87,8 @@ urlMain = "http://www.amazon."+siteVersion
 urlMainS = "https://www.amazon."+siteVersion
 addon.setSetting('email', '')
 addon.setSetting('password', '')
-deviceTypeID = "A324MFXUEZFF7B"
+#deviceTypeID = "A324MFXUEZFF7B"
+deviceTypeID = "A35LWR0L7KC0TJ"
 
 cookieFile = os.path.join(addonUserDataFolder, siteVersion + ".cookies")
 
