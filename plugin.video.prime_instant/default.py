@@ -102,12 +102,12 @@ opener.addheaders = [('User-agent', userAgent)]
 
 def index():
     loginResult = login()
-    if loginResult=="prime":
+    if loginResult=="prime" or loginResult=="noprime":
         addDir(translation(30002), "", 'browseMovies', "")
         addDir(translation(30003), "", 'browseTV', "")
         xbmcplugin.endOfDirectory(pluginhandle)
-    elif loginResult=="noprime":
-        listOriginals()
+    # elif loginResult=="noprime":
+    #     listOriginals()
     elif loginResult=="none":
         xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30082)+',10000,'+icon+')').encode("utf-8"))
 
