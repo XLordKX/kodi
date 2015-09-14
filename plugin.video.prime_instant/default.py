@@ -92,7 +92,7 @@ deviceTypeID = "A35LWR0L7KC0TJ"
 
 cookieFile = os.path.join(addonUserDataFolder, siteVersion + ".cookies")
 
-NODEBUG = True
+NODEBUG = False #True
 
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
@@ -1199,11 +1199,14 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
 def debug(content):
     if (NODEBUG):
         return
-    print unicode(content).encode("utf-8")
+    #print unicode(content).encode("utf-8")
     #log(content, xbmc.LOGDEBUG)
+    log(unicode(content), xbmc.LOGDEBUG)
 
 def log(msg, level=xbmc.LOGNOTICE):
-    xbmc.log('%s: %s' % (addonID, msg), level)
+    # xbmc.log('%s: %s' % (addonID, msg), level)
+    log_message = u'{0}: {1}'.format(addonID, msg)
+    xbmc.log(log_message.encode("utf-8"), level)
     """
     xbmc.LOGDEBUG = 0
     xbmc.LOGERROR = 4
