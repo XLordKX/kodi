@@ -438,7 +438,7 @@ def listShows(url):
     content = getUnicodePage(url)
     debug(content)
     content = content.replace("\\","")
-    if 'id="catcorresults"' in content:
+    if 'id="catCorResults"' in content:
         content = content[:content.find('id="catCorResults"')]
     match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
     if match:
