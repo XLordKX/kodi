@@ -260,6 +260,8 @@ def listOriginals():
 
 def listWatchList(url):
     content = getUnicodePage(url)
+    debug("listWatchList")
+    debug(content)
     #fp = open(os.path.join(addonFolder, "videolib.html"), "r")
     #content = unicode(fp.read(), "iso-8859-15")
     #fp.close()
@@ -1145,6 +1147,8 @@ def cleanTitle(title):
 def cleanSeasonTitle(title):
     if ": The Complete" in title:
         title = title[:title.rfind(": The Complete")]
+    if ": Season" in title:
+        title = title[:title.rfind(": Season")]
     if "Season" in title:
         title = title[:title.rfind("Season")]
     if "Staffel" in title:
