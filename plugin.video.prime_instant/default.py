@@ -84,8 +84,9 @@ viewIdShows = addon.getSetting("viewIdShows")
 viewIdSeasons = addon.getSetting("viewIdSeasons")
 viewIdEpisodes = addon.getSetting("viewIdEpisodes")
 viewIdDetails = addon.getSetting("viewIdDetails")
-urlMain = "http://www.amazon."+siteVersion
 urlMainS = "https://www.amazon."+siteVersion
+urlMain = urlMainS
+#urlMain = "http://www.amazon."+siteVersion
 addon.setSetting('email', '')
 addon.setSetting('password', '')
 #deviceTypeID = "A324MFXUEZFF7B"
@@ -1004,7 +1005,7 @@ def deleteCache():
             shutil.rmtree(cacheFolder)
 
 def getUnicodePage(url):
-
+    print url
     req = opener.open(url)
     content = ""
     if "content-type" in req.headers and "charset=" in req.headers['content-type']:
@@ -1084,7 +1085,7 @@ def removeFromQueue(videoID, videoType):
 
 def login(content = None, statusOnly = False):
     if content is None:
-        content = getUnicodePage(urlMain)
+        content = getUnicodePage(urlMainS)
     signoutmatch = re.compile("declare\('config.signOutText',(.+?)\);", re.DOTALL).findall(content)
     if '","isPrime":1' in content: # 
         return "prime"
@@ -1116,7 +1117,7 @@ def login(content = None, statusOnly = False):
                 content = br.submit().read()
                 cj.save(cookieFile)
                 cj.load(cookieFile)
-                content = getUnicodePage(urlMain)
+                content = getUnicodePage(urlMainS)
         signoutmatch = re.compile("declare\('config.signOutText',(.+?)\);", re.DOTALL).findall(content)
         if '","isPrime":1' in content: # 
             return "prime"

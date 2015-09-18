@@ -1,3 +1,6 @@
+1.1.7
+- merged pull request from 'kharts' with important fixes to get the addon up again :)
+- using amazon website with ssl by default
 1.1.6
 - deviceTypeId changed (thx to Sandmann79)
 1.1.5
