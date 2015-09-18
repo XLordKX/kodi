@@ -58,6 +58,7 @@ showNotification = addon.getSetting("showNotification") == "true"
 showOriginals = addon.getSetting("showOriginals") == "true"
 showLibrary = addon.getSetting("showLibrary") == "true"
 showAvailability = addon.getSetting("showAvailability") == "true"
+showPaidVideos = addon.getSetting("showPaidVideos") == "true"
 showKids = addon.getSetting("showKids") == "true"
 forceView = addon.getSetting("forceView") == "true"
 updateDB = addon.getSetting("updateDB") == "true"
@@ -92,22 +93,23 @@ deviceTypeID = "A35LWR0L7KC0TJ"
 
 cookieFile = os.path.join(addonUserDataFolder, siteVersion + ".cookies")
 
-NODEBUG = True
+NODEBUG = False #True
 
 opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
+# userAgent = "Mozilla/5.0 (X11; U; Linux i686; en-EN) AppleWebKit/533.4 (KHTML, like Gecko) Chrome/5.0.375.127 Large Screen Safari/533.4 GoogleTV/ 162671"
+userAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0"
 opener.addheaders = [('User-agent', userAgent)]
 
 
 
 def index():
     loginResult = login()
-    if loginResult=="prime":
+    if loginResult=="prime" or loginResult=="noprime":
         addDir(translation(30002), "", 'browseMovies', "")
         addDir(translation(30003), "", 'browseTV', "")
         xbmcplugin.endOfDirectory(pluginhandle)
-    elif loginResult=="noprime":
-        listOriginals()
+    # elif loginResult=="noprime":
+    #     listOriginals()
     elif loginResult=="none":
         xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30082)+',10000,'+icon+')').encode("utf-8"))
 
@@ -258,6 +260,8 @@ def listOriginals():
 
 def listWatchList(url):
     content = getUnicodePage(url)
+    debug("listWatchList")
+    debug(content)
     #fp = open(os.path.join(addonFolder, "videolib.html"), "r")
     #content = unicode(fp.read(), "iso-8859-15")
     #fp.close()
@@ -448,7 +452,14 @@ def listShows(url):
     for i in range(1, len(spl), 1):
         entry = spl[i]
         match = re.compile('asin="(.+?)"', re.DOTALL).findall(entry)
-        if match and ">Prime Instant Video<" in entry:
+        isPaidVideo = False
+        if showPaidVideos:
+            if ">Shop Instant Video<" in entry:
+                isPaidVideo = True
+            if ">Amazon Video:<" in entry:
+                isPaidVideo = True
+        #if match and ">Prime Instant Video<" in entry:
+        if match and ((">Prime Instant Video<" in entry) or (isPaidVideo)):
             videoID = match[0]
             match1 = re.compile('title="(.+?)"', re.DOTALL).findall(entry)
             match2 = re.compile('class="ilt2">(.+?)<', re.DOTALL).findall(entry)
@@ -575,6 +586,7 @@ def listSimilarShows(videoID):
 def listSeasons(seriesName, seriesID, thumb, showAll = False):
     xbmcplugin.setContent(pluginhandle, "seasons")
     content = getUnicodePage(urlMain+"/gp/product/"+seriesID)
+    debug("listSeasons")
     debug(content)
     match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -585,7 +597,7 @@ def listSeasons(seriesName, seriesID, thumb, showAll = False):
         match = re.compile('<option value="(.+?):.+?data-a-html-content="(.+?)"', re.DOTALL).findall(content)
         if match:
             for seasonID, title in match:
-                if "dv-dropdown-prime" in title or showAll:
+                if "dv-dropdown-prime" in title or showAll or showPaidVideos:
                     if "\n" in title:
                         title = title[:title.find("\n")]
                     addSeasonDir(title, seasonID, 'listEpisodes', thumb, seriesName, seriesID)
@@ -600,20 +612,22 @@ def listSeasons(seriesName, seriesID, thumb, showAll = False):
         if match:
             for title in match:
                 title = title.strip()
-                if "dv-dropdown-prime" in content or showAll:
+                if "dv-dropdown-prime" in content or showAll or showPaidVideos:
                     addSeasonDir(title, seriesID, 'listEpisodes', thumb, seriesName, seriesID)
             xbmcplugin.endOfDirectory(pluginhandle)
             xbmc.sleep(100)
             if forceView:
                 xbmc.executebuiltin('Container.SetViewMode('+viewIdSeasons+')')
     else:
-        listEpisodes(seriesID, seriesID, thumb, contentMain)
+        # listEpisodes(seriesID, seriesID, thumb, contentMain)
+        listEpisodes(seriesID, seriesID, thumb)
 
 
 def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
     xbmcplugin.setContent(pluginhandle, "episodes")
     if not content:
         content = getUnicodePage(urlMain+"/gp/product/"+seasonID)
+    debug("listEpisodes")
     debug(content)
     match = re.compile('"csrfToken":"(.+?)"', re.DOTALL).findall(content)
     if match:
@@ -631,7 +645,8 @@ def listEpisodes(seriesID, seasonID, thumb, content="", seriesName=""):
         entry = spl[i]
         entry = entry[:entry.find('</li>')]
         match = re.compile('class="episode-title">(.+?)<', re.DOTALL).findall(entry)
-        if match and ('class="prime-logo-small"' in entry or 'class="episode-status cell-free"' in entry or 'class="episode-status cell-owned"' in entry or 'class="episode-status cell-unavailable"' in entry):
+        #if match and ('class="prime-logo-small"' in entry or 'class="episode-status cell-free"' in entry or 'class="episode-status cell-owned"' in entry or 'class="episode-status cell-unavailable"' in entry):
+        if match and checkEpisodeStatus(entry):
             title = match[0]
             title = cleanTitle(title)
             episodeNr = title[:title.find('.')]
@@ -1038,7 +1053,10 @@ def search(type):
             if type=="movies":
                 listMovies(urlMain+"/mn/search/ajax/?_encoding=UTF8&url=node%3D7613704011&field-keywords="+search_string)
             elif type=="tv":
-                listShows(urlMain+"/mn/search/ajax/?_encoding=UTF8&url=node%3D7613705011&field-keywords="+search_string)
+                if not showPaidVideos:
+                    listShows(urlMain+"/mn/search/ajax/?_encoding=UTF8&url=node%3D7613705011&field-keywords="+search_string)
+                else:
+                    listShows(urlMain+"/mn/search/ajax/?_encoding=UTF8&url=node%3D2858778011&field-keywords="+search_string)
         elif siteVersion=="co.uk":
             if type=="movies":
                 listMovies(urlMain+"/mn/search/ajax/?_encoding=UTF8&url=node%3D3356010031&field-keywords="+search_string)
@@ -1129,6 +1147,8 @@ def cleanTitle(title):
 def cleanSeasonTitle(title):
     if ": The Complete" in title:
         title = title[:title.rfind(": The Complete")]
+    if ": Season" in title:
+        title = title[:title.rfind(": Season")]
     if "Season" in title:
         title = title[:title.rfind("Season")]
     if "Staffel" in title:
@@ -1199,11 +1219,14 @@ def addSeasonToLibrary(seriesID, seriesTitle, seasonID):
 def debug(content):
     if (NODEBUG):
         return
-    print unicode(content).encode("utf-8")
+    #print unicode(content).encode("utf-8")
     #log(content, xbmc.LOGDEBUG)
+    log(unicode(content), xbmc.LOGDEBUG)
 
 def log(msg, level=xbmc.LOGNOTICE):
-    xbmc.log('%s: %s' % (addonID, msg), level)
+    # xbmc.log('%s: %s' % (addonID, msg), level)
+    log_message = u'{0}: {1}'.format(addonID, msg)
+    xbmc.log(log_message.encode("utf-8"), level)
     """
     xbmc.LOGDEBUG = 0
     xbmc.LOGERROR = 4
@@ -1368,6 +1391,20 @@ def addEpisodeLink(name, url, mode, iconimage, desc="", duration="", season="", 
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz)
     return ok
 
+
+def checkEpisodeStatus(entry):
+    statusList = []
+    statusList.append("prime-logo-small")
+    statusList.append("episode-status cell-free")
+    statusList.append("episode-status cell-owned")
+    statusList.append("episode-status cell-unavailable")
+    if showPaidVideos:
+        statusList.append("episode-status ")
+    for status in statusList:
+        statusString = 'class="' + status + '"'
+        if statusString in entry:
+            return True
+    return False
 
 params = parameters_string_to_dict(sys.argv[2])
 mode = urllib.unquote_plus(params.get('mode', ''))
