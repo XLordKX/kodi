@@ -82,6 +82,10 @@
   <string id="30202">Views</string>
   <string id="30203">Advanced</string>
   <string id="30204">Show paid videos (US only)</string>
+  <string id="30205">The video has been successfully ordered</string>
+  <string id="30206">Allow buying videos</string>
+  <string id="30207">Buy video</string>
+  <string id="30208">Couldn&apos;t order video</string>
   <string id="30998">Show availability</string>
   <string id="30999">Deleted soon on prime instant video</string>
 </strings>
