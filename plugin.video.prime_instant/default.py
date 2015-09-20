@@ -59,6 +59,7 @@ showOriginals = addon.getSetting("showOriginals") == "true"
 showLibrary = addon.getSetting("showLibrary") == "true"
 showAvailability = addon.getSetting("showAvailability") == "true"
 showPaidVideos = addon.getSetting("showPaidVideos") == "true"
+allowBuyingVideos = addon.getSetting("allowBuyingVideos") == "true"
 showKids = addon.getSetting("showKids") == "true"
 forceView = addon.getSetting("forceView") == "true"
 updateDB = addon.getSetting("updateDB") == "true"
@@ -1004,9 +1005,9 @@ def deleteCache():
         except:
             shutil.rmtree(cacheFolder)
 
-def getUnicodePage(url):
+def getUnicodePage(url, data=None):
     print url
-    req = opener.open(url)
+    req = opener.open(url, data)
     content = ""
     if "content-type" in req.headers and "charset=" in req.headers['content-type']:
         encoding=req.headers['content-type'].split('charset=')[-1]
@@ -1328,6 +1329,8 @@ def addLink(name, url, mode, iconimage, videoType="", desc="", duration="", year
         if year:
             titleTemp += ' ('+year+')'
         entries.append((translation(30055), 'RunPlugin(plugin://'+addonID+'/?mode=addMovieToLibrary&url='+urllib.quote_plus(url.encode("utf8"))+'&name='+urllib.quote_plus(titleTemp.encode("utf8"))+')',))
+    if allowBuyingVideos:
+        entries.append((translation(30207), 'RunPlugin(plugin://'+addonID+'/?mode=buyVideo&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     entries.append((translation(30057), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarMovies&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     entries.append((translation(30058), 'Container.Update(plugin://'+addonID+'/?mode=listSimilarShows&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
@@ -1387,6 +1390,8 @@ def addEpisodeLink(name, url, mode, iconimage, desc="", duration="", season="", 
     liz.setProperty("fanart_image", fanartFile)
     entries = []
     entries.append((translation(30054), 'RunPlugin(plugin://'+addonID+'/?mode=playVideo&url='+urllib.quote_plus(url.encode("utf8"))+'&selectQuality=true)',))
+    if allowBuyingVideos:
+        entries.append((translation(30207), 'RunPlugin(plugin://'+addonID+'/?mode=buyVideo&url='+urllib.quote_plus(url.encode("utf8"))+')',))
     liz.addContextMenuItems(entries)
     liz.setProperty('IsPlayable', 'true')
     ok = xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz)
@@ -1406,6 +1411,36 @@ def checkEpisodeStatus(entry):
         if statusString in entry:
             return True
     return False
+
+
+def buyVideo(videoID):
+    data = []
+    data.append(("asin", videoID))
+    data.append(("csrfToken", addon.getSetting("csrfToken")))
+    str_data = urllib.urlencode(data)
+    content = getUnicodePage(urlMainS + "/gp/video/order/ajax/create-order.html", str_data)
+    debug("buyVideo")
+    debug(content)
+    success = False
+    if content:
+        try:
+            response = json.loads(content)
+            if response["status"] and response["status"]=="SUCCESS":
+                success = True
+            else:
+                status = response["status"]
+                message = "Order status: " + status
+                debug(message)
+        except:
+            debug("Error parsing response")
+    else:
+        debug("Response is empty")
+    if success:
+        if showNotification:
+            xbmc.executebuiltin(unicode('XBMC.Notification(Info:,'+translation(30205)+',3000,'+icon+')').encode("utf-8"))
+    else:
+        xbmc.executebuiltin(unicode('XBMC.Notification(Error:,'+translation(30208)+',3000,'+icon+')').encode("utf-8"))
+
 
 params = parameters_string_to_dict(sys.argv[2])
 mode = urllib.unquote_plus(params.get('mode', ''))
@@ -1495,5 +1530,7 @@ elif mode == 'addMovieToLibrary':
     addMovieToLibrary(url, name)
 elif mode == 'addSeasonToLibrary':
     addSeasonToLibrary(seriesID, name, url)
+elif mode == 'buyVideo':
+    buyVideo(url)
 else:
     index()
